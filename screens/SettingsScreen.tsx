@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch, Linking, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Switch, Linking, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import * as StoreReview from 'expo-store-review';
+import { useAuth } from '../contexts/AuthContext';
 import ProfileScreen from './ProfileScreen';
 import CategoriesScreen from './CategoriesScreen';
 import FAQScreen from './FAQScreen';
@@ -12,13 +13,14 @@ export default function SettingsScreen() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showCategoriesModal, setShowCategoriesModal] = useState(false);
   const [showFAQModal, setShowFAQModal] = useState(false);
+  const { user, logout } = useAuth();
 
-  // Mock user data - in real app this would come from a user store/context
-  const [currentUser, setCurrentUser] = useState({
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@example.com',
-  });
+  // Use actual user data from auth context
+  const currentUser = user || {
+    firstName: 'Guest',
+    lastName: 'User',
+    email: 'guest@example.com',
+  };
 
   const handleProfileSave = (data: { firstName: string; lastName: string }) => {
     setCurrentUser((prev) => ({
@@ -41,6 +43,28 @@ export default function SettingsScreen() {
     } catch (error) {
       console.error('Error opening app store:', error);
     }
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logout();
+            } catch (error) {
+              console.error('Logout error:', error);
+              Alert.alert('Error', 'Failed to sign out. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const settingsSections = [
@@ -97,6 +121,18 @@ export default function SettingsScreen() {
         },
       ],
     },
+    {
+      title: 'Account Actions',
+      items: [
+        {
+          icon: 'log-out-outline',
+          title: 'Sign Out',
+          subtitle: 'Sign out of your account',
+          onPress: handleLogout,
+          isDestructive: true,
+        },
+      ],
+    },
   ];
 
   return (
@@ -139,11 +175,19 @@ export default function SettingsScreen() {
                   className={`flex-row items-center p-4 ${
                     itemIndex < section.items.length - 1 ? 'border-border border-b' : ''
                   }`}>
-                  <View className="bg-accent mr-4 h-10 w-10 items-center justify-center rounded-full">
-                    <Ionicons name={item.icon as any} size={20} color={'#FFFFFF'} />
+                  <View className={`mr-4 h-10 w-10 items-center justify-center rounded-full ${
+                    (item as any).isDestructive ? 'bg-red-500' : 'bg-accent'
+                  }`}>
+                    <Ionicons 
+                      name={item.icon as any} 
+                      size={20} 
+                      color={(item as any).isDestructive ? '#FFFFFF' : '#FFFFFF'} 
+                    />
                   </View>
                   <View className="flex-1">
-                    <Text className={`text-foreground font-medium`}>{item.title}</Text>
+                    <Text className={`font-medium ${(item as any).isDestructive ? 'text-red-500' : 'text-foreground'}`}>
+                      {item.title}
+                    </Text>
                     <Text className="text-muted-foreground mt-1 text-sm">{item.subtitle}</Text>
                   </View>
                   {item.isToggle ? (

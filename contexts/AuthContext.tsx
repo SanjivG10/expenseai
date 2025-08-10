@@ -3,6 +3,7 @@ import { createContext, ReactNode, useContext, useEffect, useState } from 'react
 import Toast from 'react-native-toast-message';
 import { API_ENDPOINTS } from '../constants/api';
 import { apiService } from '../services/api';
+import { jwtDecode } from 'jwt-decode';
 
 export interface User {
   id: string;
@@ -26,7 +27,8 @@ interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
   logout: () => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
+  sendPasswordResetOTP: (email: string) => Promise<void>;
+  resetPasswordWithOTP: (email: string, otp: string, password: string) => Promise<void>;
   updateProfile: (userData: Partial<User>) => Promise<void>;
   refreshToken: () => Promise<void>;
 }
@@ -65,12 +67,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
       ]);
 
       if (storedToken && storedUser) {
+        // I need to check if the token  has expired
+        const decodedToken = jwtDecode(storedToken);
+        if (decodedToken?.exp && decodedToken.exp < Date.now() / 1000) {
+          await logout();
+          return;
+        }
+
         const user = JSON.parse(storedUser);
         setAuthState({
           user,
           token: storedToken,
           isLoading: false,
-          isAuthenticated: true,
+          isAuthenticated: false,
+          // isAuthenticated: true,
         });
 
         // Validate token with backend (optional)
@@ -93,8 +103,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const login = async (email: string, password: string): Promise<void> => {
-    setAuthState((prev) => ({ ...prev, isLoading: true }));
-
     try {
       const response = await apiService.post(API_ENDPOINTS.AUTH_LOGIN, {
         email,
@@ -129,7 +137,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error: any) {
       setAuthState((prev) => ({
         ...prev,
-        isLoading: false,
         isAuthenticated: false,
       }));
 
@@ -139,8 +146,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         text2: error.message || 'Please check your credentials and try again',
         visibilityTime: 4000,
       });
-
-      throw error;
     }
   };
 
@@ -150,8 +155,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     firstName: string,
     lastName: string
   ): Promise<void> => {
-    setAuthState((prev) => ({ ...prev, isLoading: true }));
-
     try {
       const response = await apiService.post(API_ENDPOINTS.AUTH_SIGNUP, {
         email,
@@ -188,7 +191,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error: any) {
       setAuthState((prev) => ({
         ...prev,
-        isLoading: false,
         isAuthenticated: false,
       }));
 
@@ -198,25 +200,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         text2: error.message || 'Failed to create account. Please try again.',
         visibilityTime: 4000,
       });
-
-      throw error;
     }
   };
 
   const logout = async (): Promise<void> => {
     try {
-      // Try to logout from server
-      try {
-        const refreshToken = await AsyncStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
-        if (refreshToken) {
-          await apiService.post(API_ENDPOINTS.AUTH_LOGOUT, { refreshToken });
-        }
-      } catch (error) {
-        // Ignore server errors during logout
-        console.warn('Server logout failed:', error);
-      }
+      await apiService.post(API_ENDPOINTS.AUTH_LOGOUT);
 
-      // Clear stored auth data
       await Promise.all([
         AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
         AsyncStorage.removeItem(STORAGE_KEYS.USER),
@@ -248,31 +238,62 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const resetPassword = async (email: string): Promise<void> => {
+  const sendPasswordResetOTP = async (email: string): Promise<void> => {
     try {
       const response = await apiService.post(API_ENDPOINTS.AUTH_FORGOT_PASSWORD, {
         email,
       });
 
       if (!response.success) {
-        throw new Error(response.message || 'Failed to send reset email');
+        throw new Error(response.message || 'Failed to send reset OTP');
       }
 
       Toast.show({
         type: 'success',
-        text1: 'Reset Email Sent',
-        text2: 'Check your email for reset instructions',
+        text1: 'OTP Sent',
+        text2: 'Check your email for the OTP code',
+        visibilityTime: 4000,
+      });
+    } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to Send OTP',
+        text2: error.message || 'Failed to send OTP. Please try again.',
+        visibilityTime: 4000,
+      });
+    }
+  };
+
+  const resetPasswordWithOTP = async (
+    email: string,
+    otp: string,
+    password: string
+  ): Promise<void> => {
+    try {
+      const response = await apiService.post(API_ENDPOINTS.AUTH_RESET_PASSWORD, {
+        email,
+        otp,
+        password,
+        confirmPassword: password,
+      });
+
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to reset password');
+      }
+
+      Toast.show({
+        type: 'success',
+        text1: 'Password Reset Successful',
+        text2: 'You can now sign in with your new password',
         visibilityTime: 4000,
       });
     } catch (error: any) {
       Toast.show({
         type: 'error',
         text1: 'Reset Failed',
-        text2: error.message || 'Failed to send reset email. Please try again.',
+        text2: error.message || 'Failed to reset password. Please try again.',
         visibilityTime: 4000,
       });
-
-      throw error;
     }
   };
 
@@ -360,7 +381,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     signup,
     logout,
-    resetPassword,
+    sendPasswordResetOTP,
+    resetPasswordWithOTP,
     updateProfile,
     refreshToken,
   };

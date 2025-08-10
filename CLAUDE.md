@@ -127,6 +127,7 @@ Each expense will contain:
 - Use axiosInstance with base Url.
 - Anything about urls, envs has to be exported from constant/urls.ts constant/envs.ts.
 - router push, link, has to use the url form constant/urls.ts (NEVER hardcode the urls on component code)
+- NEVER run expo / run yarn dev or yarn build. I will do it myself. Just do the tasks you are told (I will verify and will update yo later)
 
 # Style preference
 

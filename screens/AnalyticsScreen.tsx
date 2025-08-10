@@ -1,13 +1,59 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Dimensions, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
+import { apiService } from '../services/api';
+import { AnalyticsResponse, AnalyticsQuery } from '../types/api';
 
 const screenWidth = Dimensions.get('window').width;
 
 export default function AnalyticsScreen() {
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year'>('month');
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Fetch analytics data from API
+  const fetchAnalyticsData = async (isRefresh = false) => {
+    try {
+      if (isRefresh) setIsRefreshing(true);
+      else setIsLoading(true);
+
+      const query: AnalyticsQuery = {
+        period: selectedPeriod,
+      };
+
+      const response = await apiService.getAnalyticsData(query);
+      
+      if (response.success) {
+        setAnalyticsData(response.data);
+      } else {
+        Alert.alert('Error', response.message || 'Failed to load analytics');
+      }
+    } catch (error) {
+      console.error('Analytics fetch error:', error);
+      Alert.alert('Error', 'Failed to load analytics');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnalyticsData();
+  }, []);
+
+  // Re-fetch when period changes
+  useEffect(() => {
+    if (!isLoading) {
+      fetchAnalyticsData();
+    }
+  }, [selectedPeriod]);
+
+  const handleRefresh = () => {
+    fetchAnalyticsData(true);
+  };
 
   const chartConfig = {
     backgroundColor: '#000000',
@@ -26,40 +72,71 @@ export default function AnalyticsScreen() {
     },
   };
 
-  const spendingTrendData = {
-    labels: ['Jan 1', 'Jan 8', 'Jan 15', 'Jan 22', 'Jan 29'],
+  // Transform API data for charts
+  const spendingTrendData = analyticsData ? {
+    labels: analyticsData.spendingTrends.labels,
     datasets: [
       {
-        data: [120, 180, 95, 230, 160],
+        data: analyticsData.spendingTrends.data,
       },
     ],
-  };
+  } : { labels: [], datasets: [{ data: [] }] };
 
-  const categoryData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+  const monthlyComparisonData = analyticsData ? {
+    labels: analyticsData.monthlyComparison.labels,
     datasets: [
       {
-        data: [450, 380, 520, 310, 480],
+        data: analyticsData.monthlyComparison.data,
       },
     ],
-  };
+  } : { labels: [], datasets: [{ data: [] }] };
 
-  const categoryBreakdown = [
-    { name: 'Food', amount: 234, color: '#FFFFFF', legendFontColor: '#FFFFFF' },
-    { name: 'Transport', amount: 156, color: '#a3a3a3', legendFontColor: '#a3a3a3' },
-    { name: 'Shopping', amount: 189, color: '#666666', legendFontColor: '#666666' },
-    { name: 'Entertainment', amount: 89, color: '#404040', legendFontColor: '#404040' },
-    { name: 'Other', amount: 67, color: '#262626', legendFontColor: '#262626' },
-  ];
+  const categoryBreakdown = analyticsData ? analyticsData.categoryBreakdown.map(category => ({
+    name: category.name,
+    amount: category.amount,
+    color: category.color,
+    legendFontColor: category.color,
+  })) : [];
 
   const totalSpent = categoryBreakdown.reduce((sum, item) => sum + item.amount, 0);
 
-  const stats = [
-    { label: 'This Month', value: '$823.45', change: '+12%', icon: 'trending-up' },
-    { label: 'Average Daily', value: '$27.45', change: '+5%', icon: 'calendar' },
-    { label: 'Categories', value: '8', change: '0%', icon: 'list' },
-    { label: 'Transactions', value: '32', change: '+8%', icon: 'receipt' },
-  ];
+  const stats = analyticsData ? [
+    { 
+      label: 'This Month', 
+      value: `$${analyticsData.summary.thisMonth.total.toFixed(2)}`, 
+      change: analyticsData.summary.thisMonth.change, 
+      icon: 'trending-up' 
+    },
+    { 
+      label: 'Average Daily', 
+      value: `$${analyticsData.summary.avgDaily.amount.toFixed(2)}`, 
+      change: analyticsData.summary.avgDaily.change, 
+      icon: 'calendar' 
+    },
+    { 
+      label: 'Categories', 
+      value: analyticsData.summary.totalCategories.toString(), 
+      change: '0%', 
+      icon: 'list' 
+    },
+    { 
+      label: 'Transactions', 
+      value: analyticsData.summary.totalTransactions.toString(), 
+      change: '+8%', 
+      icon: 'receipt' 
+    },
+  ] : [];
+
+  // Loading state
+  if (isLoading && !analyticsData) {
+    return (
+      <View className="flex-1 bg-background items-center justify-center">
+        <StatusBar style="light" backgroundColor="#000000" />
+        <ActivityIndicator size="large" color="#FFFFFF" />
+        <Text className="mt-4 text-lg text-muted-foreground">Loading analytics...</Text>
+      </View>
+    );
+  }
 
   return (
     <View className="bg-background flex-1">
@@ -71,7 +148,17 @@ export default function AnalyticsScreen() {
         <Text className="text-muted-foreground mt-1 text-sm">Spending insights and trends</Text>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        className="flex-1" 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor="#FFFFFF"
+            titleColor="#FFFFFF"
+          />
+        }>
         {/* Period Selector */}
         <View className="mx-6 mt-6">
           <View className="border-border bg-secondary flex-row rounded-lg border p-1">
@@ -116,14 +203,21 @@ export default function AnalyticsScreen() {
         <View className="mx-6 mt-6">
           <Text className="text-foreground mb-4 text-lg font-semibold">Spending Trend</Text>
           <View className="border-border bg-secondary overflow-hidden rounded-lg border">
-            <LineChart
-              data={spendingTrendData}
-              width={screenWidth - 48}
-              height={200}
-              chartConfig={chartConfig}
-              bezier
-              style={{ marginVertical: 8 }}
-            />
+            {analyticsData && spendingTrendData.datasets[0].data.length > 0 ? (
+              <LineChart
+                data={spendingTrendData}
+                width={screenWidth - 48}
+                height={200}
+                chartConfig={chartConfig}
+                bezier
+                style={{ marginVertical: 8 }}
+              />
+            ) : (
+              <View className="h-[200px] items-center justify-center">
+                <Ionicons name="trending-up-outline" size={48} color="#404040" />
+                <Text className="mt-2 text-muted-foreground">No trend data available</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -131,16 +225,23 @@ export default function AnalyticsScreen() {
         <View className="mx-6 mt-6">
           <Text className="text-foreground mb-4 text-lg font-semibold">Category Breakdown</Text>
           <View className="border-border bg-secondary rounded-lg border p-4">
-            <PieChart
-              data={categoryBreakdown}
-              width={screenWidth - 80}
-              height={200}
-              chartConfig={chartConfig}
-              accessor="amount"
-              backgroundColor="transparent"
-              paddingLeft="15"
-              center={[10, 0]}
-            />
+            {categoryBreakdown.length > 0 ? (
+              <PieChart
+                data={categoryBreakdown}
+                width={screenWidth - 80}
+                height={200}
+                chartConfig={chartConfig}
+                accessor="amount"
+                backgroundColor="transparent"
+                paddingLeft="15"
+                center={[10, 0]}
+              />
+            ) : (
+              <View className="h-[200px] items-center justify-center">
+                <Ionicons name="pie-chart-outline" size={48} color="#404040" />
+                <Text className="mt-2 text-muted-foreground">No category data available</Text>
+              </View>
+            )}
 
             {/* Category Details */}
             <View className="mt-4">
@@ -169,15 +270,22 @@ export default function AnalyticsScreen() {
         <View className="mx-6 mb-8 mt-6">
           <Text className="text-foreground mb-4 text-lg font-semibold">Monthly Comparison</Text>
           <View className="border-border bg-secondary overflow-hidden rounded-lg border">
-            <BarChart
-              data={categoryData}
-              width={screenWidth - 48}
-              height={200}
-              chartConfig={chartConfig}
-              style={{ marginVertical: 8 }}
-              yAxisLabel="$"
-              yAxisSuffix=""
-            />
+            {analyticsData && monthlyComparisonData.datasets[0].data.length > 0 ? (
+              <BarChart
+                data={monthlyComparisonData}
+                width={screenWidth - 48}
+                height={200}
+                chartConfig={chartConfig}
+                style={{ marginVertical: 8 }}
+                yAxisLabel="$"
+                yAxisSuffix=""
+              />
+            ) : (
+              <View className="h-[200px] items-center justify-center">
+                <Ionicons name="bar-chart-outline" size={48} color="#404040" />
+                <Text className="mt-2 text-muted-foreground">No comparison data available</Text>
+              </View>
+            )}
           </View>
         </View>
 

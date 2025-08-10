@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import env from '../config/env';
 import { supabase, supabaseAdmin } from '../config/supabase';
 import { AppError, AuthenticationError, DuplicateError } from '../utils/errors';
+import { createDefaultCategoriesForUser } from './setupService';
 
 export interface User {
   id: string;
@@ -98,6 +99,8 @@ export class AuthService {
 
       const user = this.mapSupabaseUser(data.user, { firstName, lastName });
       const tokens = this.generateTokens(user);
+
+      await createDefaultCategoriesForUser(user.id);
 
       return {
         user,

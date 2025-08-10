@@ -1,28 +1,97 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, RefreshControl, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { useExpenseStore, Expense } from '../store/expenseStore';
 import AddExpenseScreen from './AddExpenseScreen';
+import { apiService } from '../services/api';
+import { ExpensesResponse, Expense, Category, ExpensesQuery } from '../types/api';
 
 export default function ExpensesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'category'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  
+  // API state
+  const [expensesData, setExpensesData] = useState<ExpensesResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  const { expenses, categories, updateExpense, deleteExpense } = useExpenseStore();
+  const categoryOptions = expensesData 
+    ? ['All', ...expensesData.categories.map((cat) => cat.name)]
+    : ['All'];
 
-  const categoryOptions = ['All', ...categories.map((cat) => cat.name)];
+  // Fetch expenses data from API
+  const fetchExpensesData = async (isRefresh = false, page = 1) => {
+    try {
+      if (isRefresh) {
+        setIsRefreshing(true);
+        setCurrentPage(1);
+      } else if (page > 1) {
+        setIsLoadingMore(true);
+      } else {
+        setIsLoading(true);
+      }
+
+      const query: ExpensesQuery = {
+        page,
+        limit: 20,
+        search: searchQuery || undefined,
+        category: filterCategory || undefined,
+        sortBy,
+        sortOrder,
+      };
+
+      const response = await apiService.getExpensesData(query);
+      
+      if (response.success) {
+        if (isRefresh || page === 1) {
+          setExpensesData(response.data);
+        } else {
+          // Append to existing data for pagination
+          setExpensesData(prev => prev ? {
+            ...response.data,
+            expenses: [...prev.expenses, ...response.data.expenses]
+          } : response.data);
+        }
+        setCurrentPage(page);
+      } else {
+        Alert.alert('Error', response.message || 'Failed to load expenses');
+      }
+    } catch (error) {
+      console.error('Expenses fetch error:', error);
+      Alert.alert('Error', 'Failed to load expenses');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+      setIsLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchExpensesData();
+  }, []);
+
+  // Re-fetch when filters change
+  useEffect(() => {
+    if (!isLoading) {
+      fetchExpensesData(true);
+    }
+  }, [searchQuery, filterCategory, sortBy, sortOrder]);
 
   const getCategoryIcon = (categoryId: string) => {
-    const category = categories.find((cat) => cat.id === categoryId);
+    if (!expensesData) return 'receipt-outline';
+    const category = expensesData.categories.find((cat) => cat.id === categoryId);
     return category?.icon || 'receipt-outline';
   };
 
   const getCategoryName = (categoryId: string) => {
-    const category = categories.find((cat) => cat.id === categoryId);
+    if (!expensesData) return categoryId;
+    const category = expensesData.categories.find((cat) => cat.id === categoryId);
     return category?.name || categoryId;
   };
 
@@ -31,7 +100,7 @@ export default function ExpensesScreen() {
     setShowEditModal(true);
   };
 
-  const handleDeleteExpense = (expense: Expense) => {
+  const handleDeleteExpense = async (expense: Expense) => {
     Alert.alert(
       'Delete Expense',
       `Are you sure you want to delete "${expense.description}"?`,
@@ -40,45 +109,62 @@ export default function ExpensesScreen() {
         { 
           text: 'Delete', 
           style: 'destructive',
-          onPress: () => deleteExpense(expense.id)
+          onPress: async () => {
+            try {
+              await apiService.deleteExpense(expense.id);
+              fetchExpensesData(true); // Refresh the list
+              Alert.alert('Success', 'Expense deleted successfully');
+            } catch (error) {
+              console.error('Delete error:', error);
+              Alert.alert('Error', 'Failed to delete expense');
+            }
+          }
         }
       ]
     );
   };
 
-  const handleUpdateExpense = (updatedExpense: any) => {
+  const handleUpdateExpense = async (updatedExpense: any) => {
     if (editingExpense) {
-      updateExpense(editingExpense.id, {
-        amount: updatedExpense.amount,
-        description: updatedExpense.description,
-        category: updatedExpense.category,
-        date: updatedExpense.date,
-        notes: updatedExpense.notes,
-        image: updatedExpense.image,
-      });
-      setEditingExpense(null);
-      setShowEditModal(false);
+      try {
+        await apiService.updateExpense(editingExpense.id, {
+          amount: updatedExpense.amount,
+          description: updatedExpense.description,
+          category: updatedExpense.category,
+          date: updatedExpense.date,
+          notes: updatedExpense.notes,
+        });
+        fetchExpensesData(true); // Refresh the list
+        setEditingExpense(null);
+        setShowEditModal(false);
+        Alert.alert('Success', 'Expense updated successfully');
+      } catch (error) {
+        console.error('Update error:', error);
+        Alert.alert('Error', 'Failed to update expense');
+      }
     }
   };
 
-  const filteredExpenses = expenses
-    .filter((expense) => {
-      const matchesSearch = expense.description.toLowerCase().includes(searchQuery.toLowerCase());
-      const categoryName = getCategoryName(expense.category);
-      const matchesCategory =
-        filterCategory === null || filterCategory === 'All' || categoryName === filterCategory;
-      return matchesSearch && matchesCategory;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'amount':
-          return b.amount - a.amount;
-        case 'category':
-          return getCategoryName(a.category).localeCompare(getCategoryName(b.category));
-        default:
-          return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-      }
-    });
+  const handleLoadMore = () => {
+    if (expensesData?.pagination.hasMore && !isLoadingMore) {
+      fetchExpensesData(false, currentPage + 1);
+    }
+  };
+
+  const handleRefresh = () => {
+    fetchExpensesData(true);
+  };
+
+  // Loading state
+  if (isLoading && !expensesData) {
+    return (
+      <View className="flex-1 bg-background items-center justify-center">
+        <StatusBar style="light" backgroundColor="#000000" />
+        <ActivityIndicator size="large" color="#FFFFFF" />
+        <Text className="mt-4 text-lg text-muted-foreground">Loading expenses...</Text>
+      </View>
+    );
+  }
 
   return (
     <View className="bg-background flex-1">
@@ -87,7 +173,9 @@ export default function ExpensesScreen() {
       {/* Header */}
       <View className="border-border border-b px-6 pb-4 pt-14">
         <Text className="text-foreground text-2xl font-bold">Expenses</Text>
-        <Text className="text-muted-foreground mt-1 text-sm">{expenses.length} transactions</Text>
+        <Text className="text-muted-foreground mt-1 text-sm">
+          {expensesData?.summary.totalExpenses || 0} transactions
+        </Text>
       </View>
 
       {/* Search Bar */}
@@ -166,8 +254,26 @@ export default function ExpensesScreen() {
       </View>
 
       {/* Expenses List */}
-      <ScrollView className="mt-4 flex-1 px-6" showsVerticalScrollIndicator={false}>
-        {filteredExpenses.map((expense) => (
+      <ScrollView 
+        className="mt-4 flex-1 px-6" 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor="#FFFFFF"
+            titleColor="#FFFFFF"
+          />
+        }
+        onScroll={({ nativeEvent }) => {
+          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+          const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 20;
+          if (isCloseToBottom && !isLoadingMore) {
+            handleLoadMore();
+          }
+        }}
+        scrollEventThrottle={400}>
+        {expensesData?.expenses.map((expense) => (
           <View
             key={expense.id}
             className="border-border bg-secondary mb-3 rounded-lg border overflow-hidden">
@@ -206,13 +312,21 @@ export default function ExpensesScreen() {
           </View>
         ))}
 
-        {filteredExpenses.length === 0 && (
+        {expensesData && expensesData.expenses.length === 0 && (
           <View className="items-center justify-center py-12">
             <Ionicons name="search-outline" size={64} color="#404040" />
             <Text className="text-muted-foreground mt-4 text-lg">No expenses found</Text>
             <Text className="text-muted-foreground mt-2 text-center text-sm">
               Try adjusting your search or filter criteria
             </Text>
+          </View>
+        )}
+
+        {/* Load More Indicator */}
+        {isLoadingMore && (
+          <View className="items-center py-4">
+            <ActivityIndicator size="small" color="#FFFFFF" />
+            <Text className="text-muted-foreground mt-2 text-sm">Loading more expenses...</Text>
           </View>
         )}
 

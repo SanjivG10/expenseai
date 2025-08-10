@@ -119,100 +119,274 @@ npm run docker:up        # Start Docker containers
 npm run docker:down      # Stop Docker containers
 ```
 
-## API Endpoints
 
-### Authentication
+# 🔄 REVISED: Screen-Centric API Design (One Call Per Screen)
 
-- `POST /api/v1/auth/register` - User registration
-- `POST /api/v1/auth/login` - User login
-- `POST /api/v1/auth/logout` - User logout
-- `POST /api/v1/auth/refresh` - Refresh JWT token
-- `POST /api/v1/auth/forgot-password` - Password reset request
-- `POST /api/v1/auth/reset-password` - Password reset confirmation
+**You're absolutely right!** Let's redesign with **one endpoint per screen** for better performance:
 
-### Users
+---
 
-- `GET /api/v1/users/profile` - Get user profile
-- `PUT /api/v1/users/profile` - Update user profile
-- `DELETE /api/v1/users/account` - Delete user account
+## 🏠 Dashboard Screen Endpoint
 
-### Expenses
+- `GET /api/v1/screens/dashboard` - Get all dashboard data in one call
+  ```json
+  Response: {
+    "monthlyStats": {
+      "total": 823.45,
+      "expenseCount": 32,
+      "avgDaily": 27.45,
+      "categoriesCount": 8
+    },
+    "recentExpenses": [
+      {
+        "id": "1", 
+        "amount": 45.67,
+        "description": "Coffee",
+        "category": "food",
+        "categoryName": "Food & Drink",
+        "categoryIcon": "restaurant-outline",
+        "date": "2025-01-10"
+      }
+      // ... last 3-5 expenses
+    ],
+    "calendarData": {
+      "2025-01-10": [expense1, expense2],
+      "2025-01-15": [expense3]
+      // Current month calendar data
+    }
+  }
+  ```
 
-- `GET /api/v1/expenses` - Get all expenses (paginated, filtered)
+---
+
+## 📝 Expenses Screen Endpoint  
+
+- `GET /api/v1/screens/expenses` - Get all expenses screen data
+  ```
+  Query params:
+  - page, limit (pagination)
+  - search (description search)  
+  - category (filter by category)
+  - startDate, endDate (date range)
+  - sortBy (date|amount|category)
+  - sortOrder (asc|desc)
+  ```
+  ```json
+  Response: {
+    "expenses": [
+      {
+        "id": "1",
+        "amount": 45.67,
+        "description": "Coffee at Starbucks",
+        "category": "food", 
+        "categoryName": "Food & Drink",
+        "categoryIcon": "restaurant-outline",
+        "date": "2025-01-10",
+        "notes": "Meeting with client",
+        "receiptImage": "url_to_image"
+      }
+      // ... paginated expenses
+    ],
+    "categories": [
+      {
+        "id": "food",
+        "name": "Food & Drink", 
+        "icon": "restaurant-outline",
+        "color": "#FF6B6B"
+      }
+      // ... all categories for filter dropdown
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 5,
+      "totalItems": 127,
+      "hasMore": true
+    },
+    "summary": {
+      "totalExpenses": 127,
+      "filteredTotal": 823.45
+    }
+  }
+  ```
+
+---
+
+## 📊 Analytics Screen Endpoint
+
+- `GET /api/v1/screens/analytics?period=month` - Get all analytics data
+  ```json
+  Response: {
+    "period": "month",
+    "summary": {
+      "thisMonth": { "total": 823.45, "change": "+12%" },
+      "avgDaily": { "amount": 27.45, "change": "+5%" },
+      "totalCategories": 8,
+      "totalTransactions": 32,
+      "topCategory": "Food & Drink"
+    },
+    "spendingTrends": {
+      "labels": ["Week 1", "Week 2", "Week 3", "Week 4"],
+      "data": [120, 180, 95, 230]
+    },
+    "categoryBreakdown": [
+      { 
+        "name": "Food", 
+        "amount": 234, 
+        "percentage": 28.4,
+        "color": "#FFFFFF" 
+      },
+      // ... pie chart data
+    ],
+    "monthlyComparison": {
+      "labels": ["Dec", "Jan", "Feb", "Mar", "Apr"],
+      "data": [450, 380, 520, 310, 480]
+    }
+  }
+  ```
+
+---
+
+## ⚙️ Settings Screen Endpoint
+
+- `GET /api/v1/screens/settings` - Get all settings data
+  ```json
+  Response: {
+    "userProfile": {
+      "id": "123",
+      "firstName": "John",
+      "lastName": "Doe", 
+      "email": "john@example.com",
+      "memberSince": "2025-01-01"
+    },
+    "categories": [
+      {
+        "id": "food",
+        "name": "Food & Drink",
+        "icon": "restaurant-outline", 
+        "color": "#FF6B6B",
+        "isDefault": false,
+        "expenseCount": 45
+      }
+      // ... all user categories
+    ],
+    "preferences": {
+      "currency": "USD",
+      "notifications": true,
+      "defaultCategory": "other"
+    }
+  }
+  ```
+
+---
+
+## 📷 Camera Screen Endpoint (after receipt scan)
+
+- `POST /api/v1/screens/camera/process-receipt` - Process receipt and return form data
+  ```json
+  Body: {
+    "image": "base64_encoded_image"
+  }
+  Response: {
+    "extractedData": {
+      "amount": 23.45,
+      "merchantName": "Starbucks", 
+      "date": "2025-01-10",
+      "suggestedCategory": "food",
+      "items": ["Latte", "Croissant"],
+      "confidence": 0.95
+    },
+    "categories": [
+      // All categories for dropdown
+    ],
+    "formDefaults": {
+      "date": "2025-01-10",
+      "currency": "USD"
+    }
+  }
+  ```
+
+---
+
+## 🔧 Individual CRUD Operations (for updates after initial screen load)
+
 - `POST /api/v1/expenses` - Create new expense
-- `GET /api/v1/expenses/:id` - Get expense by ID
-- `PUT /api/v1/expenses/:id` - Update expense
+- `PUT /api/v1/expenses/:id` - Update expense  
 - `DELETE /api/v1/expenses/:id` - Delete expense
-- `GET /api/v1/expenses/stats` - Get expense statistics
-- `GET /api/v1/expenses/export` - Export expenses (CSV/PDF)
-
-### Categories
-
-- `GET /api/v1/categories` - Get all categories
-- `POST /api/v1/categories` - Create new category
+- `POST /api/v1/categories` - Create category
 - `PUT /api/v1/categories/:id` - Update category
 - `DELETE /api/v1/categories/:id` - Delete category
+- `PUT /api/v1/users/profile` - Update profile
 
-### AI Processing
+---
 
-- `POST /api/v1/ai/process-receipt` - Process receipt image with AI
-- `POST /api/v1/ai/extract-text` - Extract text from image
-- `GET /api/v1/ai/processing-status/:jobId` - Check processing status
+# 🎯 Benefits of Screen-Centric Design:
 
-### Analytics
+### ✅ **Performance**
+- **Single network call per screen** = faster loading
+- **Reduced latency** = better user experience  
+- **Fewer loading states** = cleaner UI
 
-- `GET /api/v1/analytics/monthly` - Monthly spending analytics
-- `GET /api/v1/analytics/categories` - Category breakdown
-- `GET /api/v1/analytics/trends` - Spending trends
-- `GET /api/v1/analytics/insights` - AI-generated insights
+### ✅ **Mobile Optimization**
+- **Less battery drain** from fewer network requests
+- **Better offline support** = cache complete screen data
+- **Improved perceived performance**
+
+### ✅ **Development Benefits**  
+- **Simpler frontend logic** = one API call per screen
+- **Easier state management** = atomic data loading
+- **Better error handling** = single failure point per screen
+
+### ✅ **Backend Efficiency**
+- **Database query optimization** = join related data in single query
+- **Reduced server load** = fewer HTTP connections
+- **Better caching** = cache complete screen responses
+
+---
+
+**This revised approach gives us the best of both worlds:**
+- **Screen endpoints** for initial loads (fast, efficient)  
+- **Individual CRUD** for updates (flexible, targeted)
+
+---
+
+# 📋 Final API Endpoint Summary (Implementation Ready)
+
+## 🔐 Authentication Endpoints ✅ (Already Implemented)
+- `POST /api/v1/auth/signup`
+- `POST /api/v1/auth/login` 
+- `POST /api/v1/auth/logout`
+- `POST /api/v1/auth/refresh`
+- `POST /api/v1/auth/forgot-password`
+- `POST /api/v1/auth/reset-password`
+- `GET /api/v1/auth/profile`
+- `PUT /api/v1/auth/profile`
+
+## 📱 Screen-Centric Endpoints (To Implement)
+- `GET /api/v1/screens/dashboard` - Complete dashboard data
+- `GET /api/v1/screens/expenses` - Expenses list with filters & categories  
+- `GET /api/v1/screens/analytics` - All analytics & chart data
+- `GET /api/v1/screens/settings` - User profile, categories, preferences
+- `POST /api/v1/screens/camera/process-receipt` - AI receipt processing
+
+## 🔧 Individual CRUD Operations (To Implement)
+- `POST /api/v1/expenses` - Create expense
+- `PUT /api/v1/expenses/:id` - Update expense
+- `DELETE /api/v1/expenses/:id` - Delete expense  
+- `POST /api/v1/categories` - Create category
+- `PUT /api/v1/categories/:id` - Update category
+- `DELETE /api/v1/categories/:id` - Delete category
+- `PUT /api/v1/users/profile` - Update user profile
+
+## 🎯 Priority Implementation Order
+1. **Phase 1**: Database setup + Basic screen endpoints (dashboard, expenses, settings)
+2. **Phase 2**: Analytics endpoint + CRUD operations
+3. **Phase 3**: AI receipt processing + Camera endpoint
+
+**Total: 5 screen endpoints + 7 CRUD endpoints = 12 endpoints to implement**
+
+---
 
 ## Environment Variables
-
-```env
-# Server
-NODE_ENV=development
-PORT=3000
-API_VERSION=v1
-
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/expenseai
-REDIS_URL=redis://localhost:6379
-
-# JWT
-JWT_SECRET=your-super-secret-jwt-key
-JWT_EXPIRES_IN=24h
-JWT_REFRESH_SECRET=your-refresh-secret
-JWT_REFRESH_EXPIRES_IN=7d
-
-# OpenAI
-OPENAI_API_KEY=your-openai-api-key
-OPENAI_MODEL=gpt-4-vision-preview
-
-# Google Cloud (Optional)
-GOOGLE_CLOUD_PROJECT_ID=your-project-id
-GOOGLE_CLOUD_KEY_FILE=path/to/service-account.json
-
-# AWS S3 (Optional)
-AWS_ACCESS_KEY_ID=your-access-key
-AWS_SECRET_ACCESS_KEY=your-secret-key
-AWS_REGION=us-east-1
-AWS_S3_BUCKET=expenseai-receipts
-
-# Email Service (Optional)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
-
-# Security
-BCRYPT_ROUNDS=12
-RATE_LIMIT_MAX=100
-RATE_LIMIT_WINDOW=900000
-
-# Uploads
-MAX_FILE_SIZE=10485760
-ALLOWED_FILE_TYPES=image/jpeg,image/png,image/webp
-```
 
 ## Code Style & Conventions
 

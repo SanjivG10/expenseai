@@ -57,3 +57,6 @@ export const optionalAuth = async (
     next();
   }
 };
+
+// Export auth as an alias for authenticateToken
+export const auth = authenticateToken;

@@ -34,7 +34,8 @@ export default function SignupScreen({ onNavigateToLogin }: SignupScreenProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const { signup, isLoading } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const { signup } = useAuth();
 
   const {
     control,
@@ -60,7 +61,16 @@ export default function SignupScreen({ onNavigateToLogin }: SignupScreenProps) {
       return;
     }
 
-    await signup(data.email, data.password, data.firstName, data.lastName);
+    try {
+      setIsLoading(true);
+      await signup(data.email, data.password, data.firstName, data.lastName);
+    } catch (error) {
+      // Error is already handled by AuthContext with toast
+      // Just prevent any further navigation
+      console.error('Signup error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -96,6 +106,7 @@ export default function SignupScreen({ onNavigateToLogin }: SignupScreenProps) {
                     placeholder="John"
                     placeholderTextColor="#a3a3a3"
                     autoCapitalize="words"
+                    editable={!isLoading}
                     className="rounded-lg border border-border bg-input px-4 py-4 text-foreground"
                   />
                 )}
@@ -117,6 +128,7 @@ export default function SignupScreen({ onNavigateToLogin }: SignupScreenProps) {
                     placeholder="Doe"
                     placeholderTextColor="#a3a3a3"
                     autoCapitalize="words"
+                    editable={!isLoading}
                     className="rounded-lg border border-border bg-input px-4 py-4 text-foreground"
                   />
                 )}
@@ -146,6 +158,7 @@ export default function SignupScreen({ onNavigateToLogin }: SignupScreenProps) {
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
+                    editable={!isLoading}
                     className="flex-1 px-4 py-4 text-foreground"
                   />
                 </View>
@@ -174,6 +187,7 @@ export default function SignupScreen({ onNavigateToLogin }: SignupScreenProps) {
                     placeholderTextColor="#a3a3a3"
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
+                    editable={!isLoading}
                     className="flex-1 px-4 py-4 text-foreground"
                   />
                   <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="pr-4">
@@ -209,6 +223,7 @@ export default function SignupScreen({ onNavigateToLogin }: SignupScreenProps) {
                     placeholderTextColor="#a3a3a3"
                     secureTextEntry={!showConfirmPassword}
                     autoCapitalize="none"
+                    editable={!isLoading}
                     className="flex-1 px-4 py-4 text-foreground"
                   />
                   <TouchableOpacity
@@ -233,6 +248,7 @@ export default function SignupScreen({ onNavigateToLogin }: SignupScreenProps) {
           {/* Terms and Conditions */}
           <TouchableOpacity
             onPress={() => setAcceptedTerms(!acceptedTerms)}
+            disabled={isLoading}
             className="mb-6 flex-row items-start">
             <View
               className={`mr-3 mt-0.5 h-5 w-5 items-center justify-center rounded border-2 ${

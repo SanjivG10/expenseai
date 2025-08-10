@@ -24,7 +24,8 @@ export default function LoginScreen({
   onNavigateToForgotPassword,
 }: LoginScreenProps) {
   const [showPassword, setShowPassword] = useState(false);
-  const { login, isLoading } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuth();
 
   const {
     control,
@@ -39,7 +40,16 @@ export default function LoginScreen({
   });
 
   const onSubmit = async (data: LoginForm) => {
-    await login(data.email, data.password);
+    try {
+      setIsLoading(true);
+      await login(data.email, data.password);
+    } catch (error) {
+      // Error is already handled by AuthContext with toast
+      // Just prevent any further navigation
+      console.error('Login error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -80,6 +90,7 @@ export default function LoginScreen({
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
+                    editable={!isLoading}
                     className="flex-1 px-4 py-4 text-foreground"
                   />
                 </View>
@@ -108,6 +119,7 @@ export default function LoginScreen({
                     placeholderTextColor="#a3a3a3"
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
+                    editable={!isLoading}
                     className="flex-1 px-4 py-4 text-foreground"
                   />
                   <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="pr-4">

@@ -1,7 +1,7 @@
 // Environment variables and configuration
 export const ENV = {
   // API Configuration
-  API_BASE_URL: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1',
+  API_BASE_URL: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000',
 
   // Development/Production flags
   IS_DEV: __DEV__,

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch, Linking, Platform, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Switch, Linking, Platform, Alert, RefreshControl, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import * as StoreReview from 'expo-store-review';
@@ -7,28 +7,83 @@ import { useAuth } from '../contexts/AuthContext';
 import ProfileScreen from './ProfileScreen';
 import CategoriesScreen from './CategoriesScreen';
 import FAQScreen from './FAQScreen';
+import { apiService } from '../services/api';
+import { SettingsResponse } from '../types/api';
 
 export default function SettingsScreen() {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showCategoriesModal, setShowCategoriesModal] = useState(false);
   const [showFAQModal, setShowFAQModal] = useState(false);
+  const [settingsData, setSettingsData] = useState<SettingsResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { user, logout } = useAuth();
 
-  // Use actual user data from auth context
-  const currentUser = user || {
+  // Fetch settings data from API
+  const fetchSettingsData = async (isRefresh = false) => {
+    try {
+      if (isRefresh) setIsRefreshing(true);
+      else setIsLoading(true);
+
+      const response = await apiService.getSettingsData();
+      
+      if (response.success) {
+        setSettingsData(response.data);
+      } else {
+        Alert.alert('Error', response.message || 'Failed to load settings');
+      }
+    } catch (error) {
+      console.error('Settings fetch error:', error);
+      Alert.alert('Error', 'Failed to load settings');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSettingsData();
+  }, []);
+
+  const handleRefresh = () => {
+    fetchSettingsData(true);
+  };
+
+  const handleProfileSave = async (data: { firstName: string; lastName: string }) => {
+    try {
+      await apiService.updateProfile(data);
+      fetchSettingsData(true); // Refresh settings data
+      Alert.alert('Success', 'Profile updated successfully');
+    } catch (error) {
+      console.error('Profile update error:', error);
+      Alert.alert('Error', 'Failed to update profile');
+    }
+  };
+
+  const handleNotificationToggle = (enabled: boolean) => {
+    // In a real app, you'd save this preference to the backend
+    // For now, just update local state
+    if (settingsData) {
+      setSettingsData({
+        ...settingsData,
+        preferences: {
+          ...settingsData.preferences,
+          notifications: enabled
+        }
+      });
+    }
+  };
+
+  // Use data from API or fallback to auth context
+  const currentUser = settingsData?.userProfile || user || {
+    id: '',
     firstName: 'Guest',
     lastName: 'User',
     email: 'guest@example.com',
+    memberSince: new Date().toISOString(),
   };
 
-  const handleProfileSave = (data: { firstName: string; lastName: string }) => {
-    setCurrentUser((prev) => ({
-      ...prev,
-      firstName: data.firstName,
-      lastName: data.lastName,
-    }));
-  };
+  const notificationsEnabled = settingsData?.preferences?.notifications ?? true;
 
   const handleContactSupport = () => {
     Linking.openURL('mailto:sanjiv@upgiant.com?subject=ExpenseAI Support');
@@ -94,7 +149,7 @@ export default function SettingsScreen() {
           subtitle: 'Daily spending reminders',
           isToggle: true,
           value: notificationsEnabled,
-          onToggle: setNotificationsEnabled,
+          onToggle: handleNotificationToggle,
         },
       ],
     },
@@ -135,6 +190,17 @@ export default function SettingsScreen() {
     },
   ];
 
+  // Loading state
+  if (isLoading && !settingsData) {
+    return (
+      <View className="flex-1 bg-background items-center justify-center">
+        <StatusBar style="light" backgroundColor="#000000" />
+        <ActivityIndicator size="large" color="#FFFFFF" />
+        <Text className="mt-4 text-lg text-muted-foreground">Loading settings...</Text>
+      </View>
+    );
+  }
+
   return (
     <View className="bg-background flex-1">
       <StatusBar style="light" backgroundColor="#000000" />
@@ -145,7 +211,17 @@ export default function SettingsScreen() {
         <Text className="text-muted-foreground mt-1 text-sm">Manage your preferences</Text>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        className="flex-1" 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor="#FFFFFF"
+            titleColor="#FFFFFF"
+          />
+        }>
         {/* User Profile Card */}
         <View className="border-border bg-secondary mx-6 mt-6 rounded-lg border p-6">
           <View className="flex-row items-center">
@@ -157,7 +233,12 @@ export default function SettingsScreen() {
                 {currentUser.firstName} {currentUser.lastName}
               </Text>
               <Text className="text-muted-foreground">{currentUser.email}</Text>
-              <Text className="text-muted-foreground mt-1 text-sm">Member since Jan 2025</Text>
+              <Text className="text-muted-foreground mt-1 text-sm">
+                Member since {new Date(currentUser.memberSince).toLocaleDateString('en-US', { 
+                  month: 'short', 
+                  year: 'numeric' 
+                })}
+              </Text>
             </View>
           </View>
         </View>

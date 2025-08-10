@@ -5,6 +5,10 @@ import morgan from 'morgan';
 import { errorHandler, notFoundHandler, handleUncaughtExceptions } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimiter';
 import authRoutes from './routes/auth';
+import screenRoutes from './routes/screens';
+import expenseRoutes from './routes/expenses';
+import categoryRoutes from './routes/categories';
+import userRoutes from './routes/users';
 import env from './config/env';
 
 // Handle uncaught exceptions
@@ -65,6 +69,10 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use(`/api/${env.API_VERSION}/auth`, authRoutes);
+app.use(`/api/${env.API_VERSION}/screens`, screenRoutes);
+app.use(`/api/${env.API_VERSION}/expenses`, expenseRoutes);
+app.use(`/api/${env.API_VERSION}/categories`, categoryRoutes);
+app.use(`/api/${env.API_VERSION}/users`, userRoutes);
 
 // Catch 404 and forward to error handler
 app.use(notFoundHandler);

@@ -1,18 +1,21 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { useExpenseStore } from '../store/expenseStore';
+import * as FileSystem from 'expo-file-system';
 import AddExpenseScreen from './AddExpenseScreen';
+import { apiService } from '../services/api';
+import { ProcessReceiptResponse } from '../types/api';
 
 export default function CameraScreen() {
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
   const [showAddExpense, setShowAddExpense] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processedData, setProcessedData] = useState<ProcessReceiptResponse | null>(null);
   const cameraRef = useRef<CameraView>(null);
-  const { addExpense } = useExpenseStore();
 
   if (!permission) {
     return <View className="flex-1 bg-background" />;
@@ -40,8 +43,33 @@ export default function CameraScreen() {
     setFacing((current) => (current === 'back' ? 'front' : 'back'));
   };
 
+  const processReceiptImage = async (imageUri: string) => {
+    try {
+      setIsProcessing(true);
+      
+      // Convert image to base64
+      const base64 = await FileSystem.readAsStringAsync(imageUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      
+      const response = await apiService.processReceipt({ image: base64 });
+      
+      if (response.success) {
+        setProcessedData(response.data);
+        setShowAddExpense(true);
+      } else {
+        Alert.alert('Processing Failed', response.message || 'Failed to process receipt');
+      }
+    } catch (error) {
+      console.error('Receipt processing error:', error);
+      Alert.alert('Error', 'Failed to process receipt image');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const takePicture = async () => {
-    if (cameraRef.current) {
+    if (cameraRef.current && !isProcessing) {
       try {
         const photo = await cameraRef.current.takePictureAsync({
           quality: 0.8,
@@ -49,11 +77,7 @@ export default function CameraScreen() {
         });
 
         if (photo?.uri) {
-          Alert.alert(
-            'Photo Captured',
-            'Receipt processing will be implemented with backend integration.',
-            [{ text: 'OK' }]
-          );
+          await processReceiptImage(photo.uri);
         }
       } catch (error) {
         console.error('Error taking picture:', error);
@@ -63,6 +87,8 @@ export default function CameraScreen() {
   };
 
   const pickImage = async () => {
+    if (isProcessing) return;
+    
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -72,15 +98,24 @@ export default function CameraScreen() {
       });
 
       if (!result.canceled && result.assets[0]) {
-        Alert.alert(
-          'Image Selected',
-          'Receipt processing will be implemented with backend integration.',
-          [{ text: 'OK' }]
-        );
+        await processReceiptImage(result.assets[0].uri);
       }
     } catch (error) {
       console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to select image');
+    }
+  };
+
+  const handleExpenseSave = async (expense: any) => {
+    try {
+      // Create expense using API
+      await apiService.createExpense(expense);
+      setShowAddExpense(false);
+      setProcessedData(null);
+      Alert.alert('Success', 'Expense added successfully!');
+    } catch (error) {
+      console.error('Error saving expense:', error);
+      Alert.alert('Error', 'Failed to save expense');
     }
   };
 
@@ -97,28 +132,56 @@ export default function CameraScreen() {
       {/* Camera View */}
       <View className="m-4 flex-1 overflow-hidden rounded-xl border border-border">
         <CameraView ref={cameraRef} style={{ flex: 1 }} facing={facing}>
+          {/* Processing Overlay */}
+          {isProcessing && (
+            <View className="absolute inset-0 bg-black/70 items-center justify-center">
+              <ActivityIndicator size="large" color="#FFFFFF" />
+              <Text className="mt-4 text-lg text-white font-medium">Processing Receipt...</Text>
+              <Text className="mt-1 text-sm text-white/70">Extracting expense data</Text>
+            </View>
+          )}
+          
           <View className="flex-1 justify-end p-6">
             {/* Camera Controls */}
             <View className="flex-row items-center justify-between">
               {/* Gallery Button */}
               <TouchableOpacity
                 onPress={pickImage}
-                className="h-12 w-12 items-center justify-center rounded-full border border-border bg-secondary/80">
-                <Ionicons name="images-outline" size={24} color="#FFFFFF" />
+                disabled={isProcessing}
+                className={`h-12 w-12 items-center justify-center rounded-full border border-border ${
+                  isProcessing ? 'bg-secondary/40' : 'bg-secondary/80'
+                }`}>
+                <Ionicons 
+                  name="images-outline" 
+                  size={24} 
+                  color={isProcessing ? "#666666" : "#FFFFFF"} 
+                />
               </TouchableOpacity>
 
               {/* Capture Button */}
               <TouchableOpacity
                 onPress={takePicture}
-                className="h-20 w-20 items-center justify-center rounded-full border-4 border-primary">
-                <View className="h-16 w-16 rounded-full bg-primary" />
+                disabled={isProcessing}
+                className={`h-20 w-20 items-center justify-center rounded-full border-4 ${
+                  isProcessing ? 'border-gray-600' : 'border-primary'
+                }`}>
+                <View className={`h-16 w-16 rounded-full ${
+                  isProcessing ? 'bg-gray-600' : 'bg-primary'
+                }`} />
               </TouchableOpacity>
 
               {/* Flip Camera */}
               <TouchableOpacity
                 onPress={toggleCameraFacing}
-                className="h-12 w-12 items-center justify-center rounded-full border border-border bg-secondary/80">
-                <Ionicons name="camera-reverse-outline" size={24} color="#FFFFFF" />
+                disabled={isProcessing}
+                className={`h-12 w-12 items-center justify-center rounded-full border border-border ${
+                  isProcessing ? 'bg-secondary/40' : 'bg-secondary/80'
+                }`}>
+                <Ionicons 
+                  name="camera-reverse-outline" 
+                  size={24} 
+                  color={isProcessing ? "#666666" : "#FFFFFF"} 
+                />
               </TouchableOpacity>
             </View>
           </View>
@@ -128,19 +191,37 @@ export default function CameraScreen() {
       {/* Action Buttons */}
       <View className="px-6 pb-24">
         <TouchableOpacity 
-          onPress={() => setShowAddExpense(true)}
-          className="rounded-lg border border-border bg-secondary p-4">
+          onPress={() => {
+            setProcessedData(null);
+            setShowAddExpense(true);
+          }}
+          disabled={isProcessing}
+          className={`rounded-lg border border-border p-4 ${
+            isProcessing ? 'bg-secondary/50' : 'bg-secondary'
+          }`}>
           <View className="flex-row items-center justify-center">
-            <Ionicons name="create-outline" size={20} color="#FFFFFF" />
-            <Text className="ml-2 font-medium text-foreground">Add Expense Manually</Text>
+            <Ionicons 
+              name="create-outline" 
+              size={20} 
+              color={isProcessing ? "#666666" : "#FFFFFF"} 
+            />
+            <Text className={`ml-2 font-medium ${
+              isProcessing ? 'text-muted-foreground' : 'text-foreground'
+            }`}>
+              Add Expense Manually
+            </Text>
           </View>
         </TouchableOpacity>
       </View>
 
       <AddExpenseScreen
         visible={showAddExpense}
-        onClose={() => setShowAddExpense(false)}
-        onSave={addExpense}
+        onClose={() => {
+          setShowAddExpense(false);
+          setProcessedData(null);
+        }}
+        onSave={handleExpenseSave}
+        initialData={processedData}
       />
     </View>
   );

@@ -1,19 +1,28 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_CONFIG, buildApiUrl } from '../constants/api';
+import { API_CONFIG, API_ENDPOINTS, buildApiUrl } from '../constants/api';
+import { ENV } from 'constants/envs';
+import {
+  ApiResponse,
+  ApiError,
+  DashboardResponse,
+  ExpensesResponse,
+  ExpensesQuery,
+  AnalyticsResponse,
+  AnalyticsQuery,
+  SettingsResponse,
+  ProcessReceiptRequest,
+  ProcessReceiptResponse,
+  Expense,
+  CreateExpenseRequest,
+  UpdateExpenseRequest,
+  Category,
+  CreateCategoryRequest,
+  UpdateCategoryRequest,
+  UpdateProfileRequest,
+} from '../types/api';
 
-interface ApiResponse<T = any> {
-  success: boolean;
-  message: string;
-  data: T;
-  code?: string;
-}
-
-interface ApiError {
-  success: false;
-  message: string;
-  code: string;
-  details?: any;
-}
+const url = buildApiUrl(API_ENDPOINTS.AUTH_SIGNUP);
+console.log({ url, baseURL: API_CONFIG.BASE_URL });
 
 class ApiService {
   private baseURL: string;
@@ -38,7 +47,7 @@ class ApiService {
   private async buildHeaders(includeAuth: boolean = false): Promise<HeadersInit> {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      Accept: 'application/json',
     };
 
     if (includeAuth) {
@@ -110,11 +119,7 @@ class ApiService {
   }
 
   // POST request
-  async post<T = any>(
-    endpoint: string,
-    data?: any,
-    includeAuth: boolean = false
-  ): Promise<T> {
+  async post<T = any>(endpoint: string, data?: any, includeAuth: boolean = false): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'POST',
       body: data ? JSON.stringify(data) : undefined,
@@ -123,11 +128,7 @@ class ApiService {
   }
 
   // PUT request
-  async put<T = any>(
-    endpoint: string,
-    data?: any,
-    includeAuth: boolean = false
-  ): Promise<T> {
+  async put<T = any>(endpoint: string, data?: any, includeAuth: boolean = false): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PUT',
       body: data ? JSON.stringify(data) : undefined,
@@ -146,6 +147,66 @@ class ApiService {
   // Health check
   async healthCheck(): Promise<ApiResponse> {
     return this.get('/health');
+  }
+
+  // Screen-centric endpoints
+  async getDashboardData(): Promise<ApiResponse<DashboardResponse>> {
+    return this.get(API_ENDPOINTS.SCREEN_DASHBOARD, true);
+  }
+
+  async getExpensesData(query?: ExpensesQuery): Promise<ApiResponse<ExpensesResponse>> {
+    const queryString = query ? new URLSearchParams(query as any).toString() : '';
+    const endpoint = queryString ? `${API_ENDPOINTS.SCREEN_EXPENSES}?${queryString}` : API_ENDPOINTS.SCREEN_EXPENSES;
+    return this.get(endpoint, true);
+  }
+
+  async getAnalyticsData(query?: AnalyticsQuery): Promise<ApiResponse<AnalyticsResponse>> {
+    const queryString = query ? new URLSearchParams(query as any).toString() : '';
+    const endpoint = queryString ? `${API_ENDPOINTS.SCREEN_ANALYTICS}?${queryString}` : API_ENDPOINTS.SCREEN_ANALYTICS;
+    return this.get(endpoint, true);
+  }
+
+  async getSettingsData(): Promise<ApiResponse<SettingsResponse>> {
+    return this.get(API_ENDPOINTS.SCREEN_SETTINGS, true);
+  }
+
+  async processReceipt(data: ProcessReceiptRequest): Promise<ApiResponse<ProcessReceiptResponse>> {
+    return this.post(API_ENDPOINTS.SCREEN_CAMERA_PROCESS, data, true);
+  }
+
+  // Individual CRUD operations for expenses
+  async createExpense(data: CreateExpenseRequest): Promise<ApiResponse<Expense>> {
+    return this.post(API_ENDPOINTS.EXPENSES, data, true);
+  }
+
+  async updateExpense(id: string, data: UpdateExpenseRequest): Promise<ApiResponse<Expense>> {
+    const endpoint = API_ENDPOINTS.EXPENSE_BY_ID.replace(':id', id);
+    return this.put(endpoint, data, true);
+  }
+
+  async deleteExpense(id: string): Promise<ApiResponse<void>> {
+    const endpoint = API_ENDPOINTS.EXPENSE_BY_ID.replace(':id', id);
+    return this.delete(endpoint, true);
+  }
+
+  // Individual CRUD operations for categories
+  async createCategory(data: CreateCategoryRequest): Promise<ApiResponse<Category>> {
+    return this.post(API_ENDPOINTS.CATEGORIES, data, true);
+  }
+
+  async updateCategory(id: string, data: UpdateCategoryRequest): Promise<ApiResponse<Category>> {
+    const endpoint = API_ENDPOINTS.CATEGORY_BY_ID.replace(':id', id);
+    return this.put(endpoint, data, true);
+  }
+
+  async deleteCategory(id: string): Promise<ApiResponse<void>> {
+    const endpoint = API_ENDPOINTS.CATEGORY_BY_ID.replace(':id', id);
+    return this.delete(endpoint, true);
+  }
+
+  // User profile operations
+  async updateProfile(data: UpdateProfileRequest): Promise<ApiResponse<any>> {
+    return this.put(API_ENDPOINTS.USERS_PROFILE, data, true);
   }
 }
 

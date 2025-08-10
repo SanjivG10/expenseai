@@ -8,162 +8,271 @@ import { z } from 'zod';
 import { useAuth } from '../../contexts/AuthContext';
 import Logo from '../../components/Logo';
 
-const forgotPasswordSchema = z.object({
+const emailSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
 });
 
-type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>;
+const resetPasswordSchema = z
+  .object({
+    email: z.string().email('Please enter a valid email address'),
+    otp: z.string().min(6, 'OTP must be at least 6 characters'),
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+      .regex(/[0-9]/, 'Password must contain at least one number'),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  });
+
+type EmailForm = z.infer<typeof emailSchema>;
+type ResetPasswordForm = z.infer<typeof resetPasswordSchema>;
 
 interface ForgotPasswordScreenProps {
   onNavigateToLogin: () => void;
 }
 
 export default function ForgotPasswordScreen({ onNavigateToLogin }: ForgotPasswordScreenProps) {
-  const [emailSent, setEmailSent] = useState(false);
-  const { resetPassword, isLoading } = useAuth();
+  const [step, setStep] = useState<'email' | 'reset'>('email');
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { sendPasswordResetOTP, resetPasswordWithOTP } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const {
-    control,
-    handleSubmit,
-    getValues,
-    formState: { errors },
-  } = useForm<ForgotPasswordForm>({
-    resolver: zodResolver(forgotPasswordSchema),
+  // Email form
+  const emailForm = useForm<EmailForm>({
+    resolver: zodResolver(emailSchema),
     defaultValues: {
       email: '',
     },
   });
 
-  const onSubmit = async (data: ForgotPasswordForm) => {
-    await resetPassword(data.email);
-    setEmailSent(true);
-  };
+  // Reset password form
+  const resetForm = useForm<ResetPasswordForm>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: {
+      email: '',
+      otp: '',
+      password: '',
+      confirmPassword: '',
+    },
+  });
 
-  const handleResendEmail = async () => {
-    const email = getValues('email');
-    if (email) {
-      await resetPassword(email);
+  const onEmailSubmit = async (data: EmailForm) => {
+    try {
+      setIsLoading(true);
+      await sendPasswordResetOTP(data.email);
+      setEmail(data.email);
+      resetForm.setValue('email', data.email);
+      setStep('reset');
+    } catch (error) {
+      console.error('Send OTP error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  if (emailSent) {
+  const onResetSubmit = async (data: ResetPasswordForm) => {
+    try {
+      setIsLoading(true);
+      await resetPasswordWithOTP(data.email, data.otp, data.password);
+      onNavigateToLogin();
+    } catch (error) {
+      console.error('Reset password error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    if (email) {
+      try {
+        setIsLoading(true);
+        await sendPasswordResetOTP(email);
+      } catch (error) {
+        console.error('Resend OTP error:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  // Show password reset form if OTP has been sent
+  if (step === 'reset') {
     return (
       <View className="flex-1 bg-background">
         <StatusBar style="light" backgroundColor="#000000" />
-
-        {/* Header with back button */}
-        <View className="px-6 pb-4 pt-16">
-          <TouchableOpacity onPress={onNavigateToLogin} className="mb-4 self-start">
-            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
 
         <ScrollView
           className="flex-1"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ flexGrow: 1 }}>
-          <View className="flex-1 justify-center px-6">
-            {/* Success Animation */}
-            <View className="mb-8 items-center">
+          {/* Header */}
+          <View className="px-6 pb-8 pt-16">
+            <TouchableOpacity onPress={() => setStep('email')} className="mb-8 self-start">
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+
+            <View className="items-center">
               <Logo />
-              <Text className="mb-4 text-center text-3xl font-bold text-foreground">
-                Check Your Email
+              <Text className="mb-3 text-center text-3xl font-bold text-foreground">
+                Enter OTP & New Password
               </Text>
-              <Text className="mb-2 text-center text-lg leading-6 text-muted-foreground">
-                We&apos;ve sent a password reset link to:
-              </Text>
-              <Text className="text-center text-lg font-semibold text-foreground">
-                {getValues('email')}
+              <Text className="max-w-sm text-center text-lg leading-6 text-muted-foreground">
+                Enter the OTP sent to {email} and your new password
               </Text>
             </View>
+          </View>
 
-            {/* Instructions Card */}
-            <View className="mb-8 rounded-xl border border-border bg-secondary p-6">
-              <Text className="mb-4 text-lg font-semibold text-foreground">What&apos;s next?</Text>
-
-              <View className="space-y-4">
-                <View className="flex-row items-start">
-                  <View className="mr-4 mt-1 h-8 w-8 items-center justify-center rounded-full bg-primary">
-                    <Text className="text-sm font-bold text-primary-foreground">1</Text>
-                  </View>
-                  <View className="flex-1">
-                    <Text className="mb-1 font-medium text-foreground">Check your inbox</Text>
-                    <Text className="text-sm text-muted-foreground">
-                      Look for an email from ExpenseAI with reset instructions
-                    </Text>
-                  </View>
-                </View>
-
-                <View className="flex-row items-start">
-                  <View className="mr-4 mt-1 h-8 w-8 items-center justify-center rounded-full bg-primary">
-                    <Text className="text-sm font-bold text-primary-foreground">2</Text>
-                  </View>
-                  <View className="flex-1">
-                    <Text className="mb-1 font-medium text-foreground">Click the reset link</Text>
-                    <Text className="text-sm text-muted-foreground">
-                      The link will take you to a secure page to create a new password
-                    </Text>
-                  </View>
-                </View>
-
-                <View className="flex-row items-start">
-                  <View className="mr-4 mt-1 h-8 w-8 items-center justify-center rounded-full bg-primary">
-                    <Text className="text-sm font-bold text-primary-foreground">3</Text>
-                  </View>
-                  <View className="flex-1">
-                    <Text className="mb-1 font-medium text-foreground">Create new password</Text>
-                    <Text className="text-sm text-muted-foreground">
-                      Choose a strong password and sign in to your account
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            {/* Troubleshooting */}
-            <View className="mb-6 rounded-xl border border-accent/20 bg-accent/10 p-4">
-              <View className="flex-row items-start">
-                <Ionicons
-                  name="help-circle-outline"
-                  size={20}
-                  color="#a3a3a3"
-                  className="mr-3 mt-1"
-                />
-                <View className="flex-1">
-                  <Text className="mb-1 text-sm font-medium text-foreground">
-                    Didn&apos;t receive the email?
-                  </Text>
-                  <Text className="text-xs leading-4 text-muted-foreground">
-                    Check your spam folder or try resending the email. Make sure the email address
-                    is correct.
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Action Buttons */}
-            <View className="space-y-3">
-              <TouchableOpacity
-                onPress={handleResendEmail}
-                disabled={isLoading}
-                className={`rounded-xl border border-border p-4 ${isLoading ? 'bg-muted' : 'bg-secondary'}`}>
-                <View className="flex-row items-center justify-center">
-                  {isLoading && (
-                    <View className="mr-2">
-                      <Ionicons name="refresh-outline" size={18} color="#FFFFFF" />
+          {/* Form */}
+          <View className="flex-1 px-6">
+            {/* OTP Input */}
+            <View className="mb-4">
+              <Text className="mb-2 text-sm font-medium text-foreground">OTP Code</Text>
+              <Controller
+                control={resetForm.control}
+                name="otp"
+                render={({ field: { onChange, value } }) => (
+                  <View className="flex-row items-center rounded-lg border border-border bg-input">
+                    <View className="ml-4">
+                      <Ionicons name="key-outline" size={20} color="#a3a3a3" />
                     </View>
-                  )}
-                  <Text
-                    className={`font-semibold ${isLoading ? 'text-muted-foreground' : 'text-foreground'}`}>
-                    {isLoading ? 'Sending...' : 'Resend Email'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity onPress={onNavigateToLogin} className="rounded-xl bg-primary p-4">
-                <Text className="text-center font-semibold text-primary-foreground">
-                  Back to Sign In
+                    <TextInput
+                      value={value}
+                      onChangeText={onChange}
+                      placeholder="Enter 6-digit OTP"
+                      placeholderTextColor="#a3a3a3"
+                      keyboardType="number-pad"
+                      maxLength={6}
+                      editable={!isLoading}
+                      className="flex-1 px-4 py-4 text-center font-mono text-lg text-foreground"
+                    />
+                  </View>
+                )}
+              />
+              {resetForm.formState.errors.otp && (
+                <Text className="mt-1 text-sm text-destructive">
+                  {resetForm.formState.errors.otp.message}
                 </Text>
+              )}
+            </View>
+
+            {/* Password Input */}
+            <View className="mb-4">
+              <Text className="mb-2 text-sm font-medium text-foreground">New Password</Text>
+              <Controller
+                control={resetForm.control}
+                name="password"
+                render={({ field: { onChange, value } }) => (
+                  <View className="flex-row items-center rounded-lg border border-border bg-input">
+                    <View className="ml-4">
+                      <Ionicons name="lock-closed-outline" size={20} color="#a3a3a3" />
+                    </View>
+                    <TextInput
+                      value={value}
+                      onChangeText={onChange}
+                      placeholder="Create a strong password"
+                      placeholderTextColor="#a3a3a3"
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                      editable={!isLoading}
+                      className="flex-1 px-4 py-4 text-foreground"
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowPassword(!showPassword)}
+                      className="pr-4">
+                      <Ionicons
+                        name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                        size={20}
+                        color="#a3a3a3"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              />
+              {resetForm.formState.errors.password && (
+                <Text className="mt-1 text-sm text-destructive">
+                  {resetForm.formState.errors.password.message}
+                </Text>
+              )}
+            </View>
+
+            {/* Confirm Password Input */}
+            <View className="mb-6">
+              <Text className="mb-2 text-sm font-medium text-foreground">Confirm New Password</Text>
+              <Controller
+                control={resetForm.control}
+                name="confirmPassword"
+                render={({ field: { onChange, value } }) => (
+                  <View className="flex-row items-center rounded-lg border border-border bg-input">
+                    <View className="ml-4">
+                      <Ionicons name="lock-closed-outline" size={20} color="#a3a3a3" />
+                    </View>
+                    <TextInput
+                      value={value}
+                      onChangeText={onChange}
+                      placeholder="Confirm your password"
+                      placeholderTextColor="#a3a3a3"
+                      secureTextEntry={!showConfirmPassword}
+                      autoCapitalize="none"
+                      editable={!isLoading}
+                      className="flex-1 px-4 py-4 text-foreground"
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="pr-4">
+                      <Ionicons
+                        name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'}
+                        size={20}
+                        color="#a3a3a3"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              />
+              {resetForm.formState.errors.confirmPassword && (
+                <Text className="mt-1 text-sm text-destructive">
+                  {resetForm.formState.errors.confirmPassword.message}
+                </Text>
+              )}
+            </View>
+
+            {/* Reset Button */}
+            <TouchableOpacity
+              onPress={resetForm.handleSubmit(onResetSubmit)}
+              disabled={isLoading}
+              className={`mb-4 rounded-lg p-4 ${isLoading ? 'bg-muted' : 'bg-primary'}`}>
+              <View className="flex-row items-center justify-center">
+                {isLoading && (
+                  <View className="mr-2">
+                    <Ionicons name="refresh-outline" size={20} color="#000000" />
+                  </View>
+                )}
+                <Text
+                  className={`font-semibold ${isLoading ? 'text-muted-foreground' : 'text-primary-foreground'}`}>
+                  {isLoading ? 'Resetting Password...' : 'Reset Password'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Bottom Actions */}
+          <View className="px-6 pb-8">
+            <View className="mb-3 flex-row items-center justify-center">
+              <Text className="text-muted-foreground">Didn&apos;t receive the OTP? </Text>
+              <TouchableOpacity onPress={handleResendOTP} disabled={isLoading}>
+                <Text className="font-medium text-primary">Resend</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View className="flex-row items-center justify-center">
+              <Text className="text-muted-foreground">Remember your password? </Text>
+              <TouchableOpacity onPress={onNavigateToLogin}>
+                <Text className="font-medium text-primary">Sign In</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -204,7 +313,7 @@ export default function ForgotPasswordScreen({ onNavigateToLogin }: ForgotPasswo
             <View className="mb-8">
               <Text className="mb-3 text-sm font-medium text-foreground">Email Address</Text>
               <Controller
-                control={control}
+                control={emailForm.control}
                 name="email"
                 render={({ field: { onChange, value } }) => (
                   <View className="flex-row items-center rounded-xl border border-border bg-input">
@@ -219,19 +328,22 @@ export default function ForgotPasswordScreen({ onNavigateToLogin }: ForgotPasswo
                       keyboardType="email-address"
                       autoCapitalize="none"
                       autoCorrect={false}
+                      editable={!isLoading}
                       className="flex-1 px-4 py-5 text-lg text-foreground"
                     />
                   </View>
                 )}
               />
-              {errors.email && (
-                <Text className="mt-2 text-sm text-destructive">{errors.email.message}</Text>
+              {emailForm.formState.errors.email && (
+                <Text className="mt-2 text-sm text-destructive">
+                  {emailForm.formState.errors.email.message}
+                </Text>
               )}
             </View>
 
             {/* Reset Button */}
             <TouchableOpacity
-              onPress={handleSubmit(onSubmit)}
+              onPress={emailForm.handleSubmit(onEmailSubmit)}
               disabled={isLoading}
               className={`mb-6 rounded-xl p-5 ${isLoading ? 'bg-muted' : 'bg-primary'}`}>
               <View className="flex-row items-center justify-center">
@@ -242,7 +354,7 @@ export default function ForgotPasswordScreen({ onNavigateToLogin }: ForgotPasswo
                 )}
                 <Text
                   className={`text-lg font-bold ${isLoading ? 'text-muted-foreground' : 'text-primary-foreground'}`}>
-                  {isLoading ? 'Sending Reset OTP Code...' : 'Send Reset OTP Code'}
+                  {isLoading ? 'Sending OTP...' : 'Send OTP'}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -259,8 +371,8 @@ export default function ForgotPasswordScreen({ onNavigateToLogin }: ForgotPasswo
                 <View className="flex-1">
                   <Text className="mb-1 text-sm font-medium text-foreground">Security Notice</Text>
                   <Text className="text-xs leading-4 text-muted-foreground">
-                    For your security, the reset link will expire in 1 hour. If you don&apos;t
-                    receive an email within a few minutes, please check your spam folder.
+                    For your security, the OTP will expire in 10 minutes. If you don&apos;t receive
+                    an email within a few minutes, please check your spam folder.
                   </Text>
                 </View>
               </View>

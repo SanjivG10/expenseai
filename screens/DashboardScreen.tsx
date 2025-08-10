@@ -1,29 +1,53 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { useExpenseStore, Expense } from '../store/expenseStore';
 import { useNavigation } from '@react-navigation/native';
 import AddExpenseScreen from './AddExpenseScreen';
 import CalendarView from '../components/CalendarView';
 import { format } from 'date-fns';
+import { apiService } from '../services/api';
+import { DashboardResponse, Expense } from '../types/api';
+import { ROUTES } from '../constants/urls';
 
 export default function DashboardScreen() {
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showCalendarView, setShowCalendarView] = useState(false);
-  const { expenses, addExpense, categories } = useExpenseStore();
+  const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const navigation = useNavigation();
 
-  const currentMonth = format(new Date(), 'yyyy-MM');
   const currentMonthName = format(new Date(), 'MMMM yyyy');
 
-  const monthlyExpenses = expenses.filter((expense) => expense.date.startsWith(currentMonth));
+  // Fetch dashboard data from API
+  const fetchDashboardData = async (isRefresh = false) => {
+    try {
+      if (isRefresh) setIsRefreshing(true);
+      else setIsLoading(true);
 
-  const monthlyTotal = monthlyExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const recentExpenses = expenses.slice(0, 3);
+      const response = await apiService.getDashboardData();
+      
+      if (response.success) {
+        setDashboardData(response.data);
+      } else {
+        Alert.alert('Error', response.message || 'Failed to load dashboard data');
+      }
+    } catch (error) {
+      console.error('Dashboard fetch error:', error);
+      Alert.alert('Error', 'Failed to load dashboard data');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
 
-  const getCategoryName = (categoryId: string) => {
-    return categories.find((cat) => cat.id === categoryId)?.name || categoryId;
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const handleRefresh = () => {
+    fetchDashboardData(true);
   };
 
   const handleCalendarDaySelect = () => {
@@ -32,8 +56,24 @@ export default function DashboardScreen() {
 
   const handleViewAllExpenses = () => {
     // @ts-ignore - Navigate to Expenses tab
-    navigation.navigate('Expenses');
+    navigation.navigate(ROUTES.EXPENSES as never);
   };
+
+  const handleAddExpense = (expense: any) => {
+    // After adding expense, refresh dashboard data
+    fetchDashboardData(true);
+  };
+
+  // Loading state
+  if (isLoading && !dashboardData) {
+    return (
+      <View className="flex-1 bg-background items-center justify-center">
+        <StatusBar style="light" backgroundColor="#000000" />
+        <Ionicons name="refresh-outline" size={48} color="#404040" />
+        <Text className="mt-4 text-lg text-muted-foreground">Loading dashboard...</Text>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-background">
@@ -58,7 +98,17 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        className="flex-1" 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor="#FFFFFF"
+            titleColor="#FFFFFF"
+          />
+        }>
         {/* Calendar View */}
         {showCalendarView && (
           <View className="mx-6 mt-6">
@@ -66,33 +116,37 @@ export default function DashboardScreen() {
           </View>
         )}
         {/* Monthly Overview Card */}
-        {!showCalendarView && (
+        {!showCalendarView && dashboardData && (
           <View className="mx-6 mt-6 rounded-lg border border-border bg-secondary p-6">
             <View className="mb-4 flex-row items-center justify-between">
               <Text className="text-lg font-semibold text-foreground">This Month</Text>
               <Ionicons name="trending-up-outline" size={24} color="#FFFFFF" />
             </View>
-            <Text className="text-3xl font-bold text-foreground">${monthlyTotal.toFixed(2)}</Text>
+            <Text className="text-3xl font-bold text-foreground">
+              ${dashboardData.monthlyStats.total.toFixed(2)}
+            </Text>
             <Text className="mt-1 text-sm text-muted-foreground">Total spent</Text>
           </View>
         )}
         {/* Quick Stats */}
-        {!showCalendarView && (
+        {!showCalendarView && dashboardData && (
           <View className="mx-6 mt-4 flex-row gap-3">
             <View className="flex-1 rounded-lg border border-border bg-secondary p-4">
               <Text className="text-sm text-muted-foreground">Categories</Text>
-              <Text className="mt-1 text-xl font-bold text-foreground">{categories.length}</Text>
+              <Text className="mt-1 text-xl font-bold text-foreground">
+                {dashboardData.monthlyStats.categoriesCount}
+              </Text>
             </View>
             <View className="flex-1 rounded-lg border border-border bg-secondary p-4">
               <Text className="text-sm text-muted-foreground">Transactions</Text>
               <Text className="mt-1 text-xl font-bold text-foreground">
-                {monthlyExpenses.length}
+                {dashboardData.monthlyStats.expenseCount}
               </Text>
             </View>
             <View className="flex-1 rounded-lg border border-border bg-secondary p-4">
               <Text className="text-sm text-muted-foreground">Avg/Day</Text>
               <Text className="mt-1 text-xl font-bold text-foreground">
-                ${monthlyExpenses.length > 0 ? (monthlyTotal / 10).toFixed(0) : '0'}
+                ${dashboardData.monthlyStats.avgDaily.toFixed(0)}
               </Text>
             </View>
           </View>
@@ -106,22 +160,30 @@ export default function DashboardScreen() {
             </TouchableOpacity>
           </View>
 
-          {recentExpenses.map((expense) => (
-            <TouchableOpacity
-              key={expense.id}
-              className="mb-3 flex-row items-center rounded-lg border border-border bg-secondary p-4">
-              <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-accent">
-                <Ionicons name="receipt-outline" size={20} color="#FFFFFF" />
-              </View>
-              <View className="flex-1">
-                <Text className="font-medium text-foreground">{expense.description}</Text>
-                <Text className="text-sm text-muted-foreground">
-                  {getCategoryName(expense.category)} • {expense.date}
-                </Text>
-              </View>
-              <Text className="font-bold text-foreground">${expense.amount.toFixed(2)}</Text>
-            </TouchableOpacity>
-          ))}
+          {dashboardData && dashboardData.recentExpenses.length > 0 ? (
+            dashboardData.recentExpenses.map((expense) => (
+              <TouchableOpacity
+                key={expense.id}
+                className="mb-3 flex-row items-center rounded-lg border border-border bg-secondary p-4">
+                <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-accent">
+                  <Ionicons name="receipt-outline" size={20} color="#FFFFFF" />
+                </View>
+                <View className="flex-1">
+                  <Text className="font-medium text-foreground">{expense.description}</Text>
+                  <Text className="text-sm text-muted-foreground">
+                    {expense.categoryName} • {expense.date}
+                  </Text>
+                </View>
+                <Text className="font-bold text-foreground">${expense.amount.toFixed(2)}</Text>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View className="items-center py-8">
+              <Ionicons name="receipt-outline" size={48} color="#404040" />
+              <Text className="mt-4 text-muted-foreground">No expenses yet</Text>
+              <Text className="text-sm text-muted-foreground">Add your first expense to get started</Text>
+            </View>
+          )}
         </View>
 
         {!showCalendarView && (
@@ -129,7 +191,7 @@ export default function DashboardScreen() {
             <Text className="mb-4 text-lg font-semibold text-foreground">Quick Actions</Text>
             <View className="flex-row gap-3">
               <TouchableOpacity 
-                onPress={() => navigation.navigate('Camera' as never)}
+                onPress={() => navigation.navigate(ROUTES.CAMERA as never)}
                 className="flex-1 items-center rounded-lg bg-primary p-4">
                 <Ionicons name="camera-outline" size={24} color="#000000" />
                 <Text className="mt-2 font-medium text-primary-foreground">Scan Receipt</Text>
@@ -150,7 +212,7 @@ export default function DashboardScreen() {
       <AddExpenseScreen
         visible={showAddExpense}
         onClose={() => setShowAddExpense(false)}
-        onSave={addExpense}
+        onSave={handleAddExpense}
       />
     </View>
   );

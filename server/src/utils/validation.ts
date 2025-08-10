@@ -41,18 +41,26 @@ export const forgotPasswordSchema = z.object({
 
 export const verifyOTPSchema = z.object({
   email: emailSchema,
-  token: z.string().min(6, 'OTP must be at least 6 characters').max(10, 'OTP must not exceed 10 characters'),
+  token: z
+    .string()
+    .min(6, 'OTP must be at least 6 characters')
+    .max(10, 'OTP must not exceed 10 characters'),
 });
 
-export const resetPasswordSchema = z.object({
-  email: emailSchema,
-  otp: z.string().min(6, 'OTP must be at least 6 characters').max(10, 'OTP must not exceed 10 characters'),
-  password: passwordSchema,
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
+export const resetPasswordSchema = z
+  .object({
+    email: emailSchema,
+    otp: z
+      .string()
+      .min(6, 'OTP must be at least 6 characters')
+      .max(10, 'OTP must not exceed 10 characters'),
+    password: passwordSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  });
 
 export const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
@@ -63,13 +71,82 @@ export const updateProfileSchema = z.object({
   lastName: nameSchema.optional(),
 });
 
+// Screen endpoint query schemas
+export const expensesQuerySchema = z.object({
+  page: z.coerce.number().min(1).default(1),
+  limit: z.coerce.number().min(1).max(100).default(20),
+  search: z.string().optional(),
+  category: z.string().uuid().optional(),
+  start_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)')
+    .optional(),
+  end_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)')
+    .optional(),
+  sort_by: z.enum(['date', 'amount', 'category']).default('date'),
+  sort_order: z.enum(['asc', 'desc']).default('desc'),
+});
+
+export const analyticsQuerySchema = z.object({
+  period: z.enum(['week', 'month', 'year']).default('month'),
+});
+
+// Expense CRUD schemas
+export const createExpenseSchema = z.object({
+  amount: z.number().min(0.01, 'Amount must be greater than 0'),
+  description: z.string().min(1, 'Description is required').max(255, 'Description too long'),
+  category_id: z.string().uuid('Invalid category ID'),
+  expense_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
+  notes: z.string().max(1000, 'Notes too long').optional(),
+  receipt_image: z.string().optional(), // base64 string
+});
+
+export const updateExpenseSchema = z.object({
+  amount: z.number().min(0.01, 'Amount must be greater than 0').optional(),
+  description: z
+    .string()
+    .min(1, 'Description is required')
+    .max(255, 'Description too long')
+    .optional(),
+  category_id: z.string().uuid('Invalid category ID').optional(),
+  expense_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)')
+    .optional(),
+  notes: z.string().max(1000, 'Notes too long').optional(),
+  receipt_image: z.string().optional(),
+});
+
+// Category CRUD schemas
+export const createCategorySchema = z.object({
+  name: z.string().min(1, 'Category name is required').max(100, 'Name too long'),
+  icon: z.string().min(1, 'Icon is required').max(50, 'Icon name too long'),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Color must be a valid hex color'),
+});
+
+export const updateCategorySchema = z.object({
+  name: z.string().min(1, 'Category name is required').max(100, 'Name too long').optional(),
+  icon: z.string().min(1, 'Icon is required').max(50, 'Icon name too long').optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9A-Fa-f]{6}$/, 'Color must be a valid hex color')
+    .optional(),
+});
+
+// Receipt processing schema
+export const processReceiptSchema = z.object({
+  image: z.string().min(1, 'Image is required'), // base64 encoded image
+});
+
 // Generic validation helper
 export function validateSchema<T>(schema: z.ZodSchema<T>, data: unknown): T {
   try {
     return schema.parse(data);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const message = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
+      const message = error.errors.map((err) => `${err.path.join('.')}: ${err.message}`).join(', ');
       throw new Error(`Validation failed: ${message}`);
     }
     throw error;
@@ -84,3 +161,10 @@ export type VerifyOTPData = z.infer<typeof verifyOTPSchema>;
 export type ResetPasswordData = z.infer<typeof resetPasswordSchema>;
 export type RefreshTokenData = z.infer<typeof refreshTokenSchema>;
 export type UpdateProfileData = z.infer<typeof updateProfileSchema>;
+export type ExpensesQueryData = z.infer<typeof expensesQuerySchema>;
+export type AnalyticsQueryData = z.infer<typeof analyticsQuerySchema>;
+export type CreateExpenseData = z.infer<typeof createExpenseSchema>;
+export type UpdateExpenseData = z.infer<typeof updateExpenseSchema>;
+export type CreateCategoryData = z.infer<typeof createCategorySchema>;
+export type UpdateCategoryData = z.infer<typeof updateCategorySchema>;
+export type ProcessReceiptData = z.infer<typeof processReceiptSchema>;

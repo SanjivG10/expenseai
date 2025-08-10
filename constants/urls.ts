@@ -1,11 +1,10 @@
 export const ROUTES = {
-  // Tab Routes
-  HOME: '/',
-  DASHBOARD: '/',
-  CAMERA: '/camera',
-  EXPENSES: '/expenses',
-  ANALYTICS: '/analytics',
-  SETTINGS: '/settings',
+  // Tab Routes (React Navigation names)
+  DASHBOARD: 'Dashboard',
+  CAMERA: 'Camera',
+  EXPENSES: 'Expenses',
+  ANALYTICS: 'Analytics',
+  SETTINGS: 'Settings',
 
   // Modal/Stack Routes
   ADD_EXPENSE: '/add-expense',

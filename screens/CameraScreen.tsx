@@ -4,11 +4,15 @@ import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import { useExpenseStore } from '../store/expenseStore';
+import AddExpenseScreen from './AddExpenseScreen';
 
 export default function CameraScreen() {
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
+  const [showAddExpense, setShowAddExpense] = useState(false);
   const cameraRef = useRef<CameraView>(null);
+  const { addExpense } = useExpenseStore();
 
   if (!permission) {
     return <View className="flex-1 bg-background" />;
@@ -123,13 +127,21 @@ export default function CameraScreen() {
 
       {/* Action Buttons */}
       <View className="px-6 pb-24">
-        <TouchableOpacity className="rounded-lg border border-border bg-secondary p-4">
+        <TouchableOpacity 
+          onPress={() => setShowAddExpense(true)}
+          className="rounded-lg border border-border bg-secondary p-4">
           <View className="flex-row items-center justify-center">
             <Ionicons name="create-outline" size={20} color="#FFFFFF" />
             <Text className="ml-2 font-medium text-foreground">Add Expense Manually</Text>
           </View>
         </TouchableOpacity>
       </View>
+
+      <AddExpenseScreen
+        visible={showAddExpense}
+        onClose={() => setShowAddExpense(false)}
+        onSave={addExpense}
+      />
     </View>
   );
 }

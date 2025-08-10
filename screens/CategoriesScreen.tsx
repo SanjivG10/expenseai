@@ -20,7 +20,28 @@ const availableIcons = [
   'paw-outline',
   'school-outline',
   'build-outline',
-  'ellipsis-horizontal-outline',
+  'cafe-outline',
+  'pizza-outline',
+  'wine-outline',
+  'bus-outline',
+  'train-outline',
+  'bicycle-outline',
+  'walk-outline',
+  'shirt-outline',
+  'watch-outline',
+  'phone-portrait-outline',
+  'laptop-outline',
+  'game-controller-outline',
+  'musical-notes-outline',
+  'film-outline',
+  'camera-outline',
+  'cut-outline',
+  'brush-outline',
+  'heart-outline',
+  'leaf-outline',
+  'flower-outline',
+  'business-outline',
+  'card-outline',
 ];
 
 interface CategoriesScreenProps {
@@ -32,7 +53,7 @@ export default function CategoriesScreen({ visible, onClose }: CategoriesScreenP
   const { categories, addCategory, deleteCategory } = useExpenseStore();
   const [showAddForm, setShowAddForm] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [selectedIcon, setSelectedIcon] = useState('ellipsis-horizontal-outline');
+  const [selectedIcon, setSelectedIcon] = useState('card-outline');
 
   const handleAddCategory = () => {
     if (newCategoryName.trim()) {
@@ -43,7 +64,7 @@ export default function CategoriesScreen({ visible, onClose }: CategoriesScreenP
       };
       addCategory(newCategory);
       setNewCategoryName('');
-      setSelectedIcon('ellipsis-horizontal-outline');
+      setSelectedIcon('card-outline');
       setShowAddForm(false);
     }
   };

@@ -45,7 +45,7 @@ const defaultCategories: Category[] = [
   { id: 'groceries', name: 'Groceries', icon: 'basket-outline' },
   { id: 'utilities', name: 'Utilities', icon: 'flash-outline' },
   { id: 'healthcare', name: 'Healthcare', icon: 'medical-outline' },
-  { id: 'other', name: 'Other', icon: 'ellipsis-horizontal-outline' },
+  { id: 'other', name: 'Other', icon: 'card-outline' },
 ];
 
 // Sample data for development

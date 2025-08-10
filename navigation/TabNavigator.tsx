@@ -57,7 +57,7 @@ export default function TabNavigator() {
         },
       })}>
       <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ title: 'Home' }} />
-      <Tab.Screen name="Camera" component={CameraScreen} options={{ title: 'Add' }} />
+      <Tab.Screen name="Camera" component={CameraScreen} options={{ title: 'Scan' }} />
       <Tab.Screen name="Expenses" component={ExpensesScreen} />
       <Tab.Screen name="Analytics" component={AnalyticsScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />

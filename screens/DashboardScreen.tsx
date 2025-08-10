@@ -128,7 +128,9 @@ export default function DashboardScreen() {
           <View className="mx-6 mt-6">
             <Text className="mb-4 text-lg font-semibold text-foreground">Quick Actions</Text>
             <View className="flex-row gap-3">
-              <TouchableOpacity className="flex-1 items-center rounded-lg bg-primary p-4">
+              <TouchableOpacity 
+                onPress={() => navigation.navigate('Camera' as never)}
+                className="flex-1 items-center rounded-lg bg-primary p-4">
                 <Ionicons name="camera-outline" size={24} color="#000000" />
                 <Text className="mt-2 font-medium text-primary-foreground">Scan Receipt</Text>
               </TouchableOpacity>

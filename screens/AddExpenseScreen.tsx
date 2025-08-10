@@ -30,6 +30,7 @@ interface AddExpenseScreenProps {
   visible: boolean;
   onClose: () => void;
   onSave?: (expense: any) => void;
+  initialData?: any;
 }
 
 const categories = [
@@ -40,11 +41,11 @@ const categories = [
   { id: 'groceries', name: 'Groceries', icon: 'basket-outline' },
   { id: 'utilities', name: 'Utilities', icon: 'flash-outline' },
   { id: 'healthcare', name: 'Healthcare', icon: 'medical-outline' },
-  { id: 'other', name: 'Other', icon: 'ellipsis-horizontal-outline' },
+  { id: 'other', name: 'Other', icon: 'card-outline' },
 ];
 
-export default function AddExpenseScreen({ visible, onClose, onSave }: AddExpenseScreenProps) {
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+export default function AddExpenseScreen({ visible, onClose, onSave, initialData }: AddExpenseScreenProps) {
+  const [selectedImage, setSelectedImage] = useState<string | null>(initialData?.image || null);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
 
   const {
@@ -57,11 +58,11 @@ export default function AddExpenseScreen({ visible, onClose, onSave }: AddExpens
   } = useForm<ExpenseForm>({
     resolver: zodResolver(expenseSchema),
     defaultValues: {
-      amount: '',
-      description: '',
-      category: '',
-      date: new Date().toISOString().split('T')[0],
-      notes: '',
+      amount: initialData?.amount?.toString() || '',
+      description: initialData?.description || '',
+      category: initialData?.category || '',
+      date: initialData?.date || new Date().toISOString().split('T')[0],
+      notes: initialData?.notes || '',
     },
   });
 
@@ -100,13 +101,26 @@ export default function AddExpenseScreen({ visible, onClose, onSave }: AddExpens
   };
 
   const handleClose = () => {
-    reset();
-    setSelectedImage(null);
+    if (initialData) {
+      // Reset to initial values when editing
+      reset({
+        amount: initialData.amount?.toString() || '',
+        description: initialData.description || '',
+        category: initialData.category || '',
+        date: initialData.date || new Date().toISOString().split('T')[0],
+        notes: initialData.notes || '',
+      });
+      setSelectedImage(initialData.image || null);
+    } else {
+      // Reset to empty values when adding new
+      reset();
+      setSelectedImage(null);
+    }
     onClose();
   };
 
   const getCategoryIcon = (categoryId: string) => {
-    return categories.find((cat) => cat.id === categoryId)?.icon || 'ellipsis-horizontal-outline';
+    return categories.find((cat) => cat.id === categoryId)?.icon || 'card-outline';
   };
 
   const getCategoryName = (categoryId: string) => {
@@ -123,7 +137,9 @@ export default function AddExpenseScreen({ visible, onClose, onSave }: AddExpens
           <TouchableOpacity onPress={handleClose}>
             <Ionicons name="close" size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text className="text-xl font-bold text-foreground">Add Expense</Text>
+          <Text className="text-xl font-bold text-foreground">
+            {initialData ? 'Edit Expense' : 'Add Expense'}
+          </Text>
           <TouchableOpacity
             onPress={handleSubmit(onSubmit)}
             className="rounded-lg bg-primary px-4 py-2">

@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { useExpenseStore } from '../store/expenseStore';
+import { useExpenseStore, Expense } from '../store/expenseStore';
+import AddExpenseScreen from './AddExpenseScreen';
 
 export default function ExpensesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'category'>('date');
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
-  const { expenses, categories } = useExpenseStore();
+  const { expenses, categories, updateExpense, deleteExpense } = useExpenseStore();
 
   const categoryOptions = ['All', ...categories.map((cat) => cat.name)];
 
@@ -21,6 +24,41 @@ export default function ExpensesScreen() {
   const getCategoryName = (categoryId: string) => {
     const category = categories.find((cat) => cat.id === categoryId);
     return category?.name || categoryId;
+  };
+
+  const handleEditExpense = (expense: Expense) => {
+    setEditingExpense(expense);
+    setShowEditModal(true);
+  };
+
+  const handleDeleteExpense = (expense: Expense) => {
+    Alert.alert(
+      'Delete Expense',
+      `Are you sure you want to delete "${expense.description}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: () => deleteExpense(expense.id)
+        }
+      ]
+    );
+  };
+
+  const handleUpdateExpense = (updatedExpense: any) => {
+    if (editingExpense) {
+      updateExpense(editingExpense.id, {
+        amount: updatedExpense.amount,
+        description: updatedExpense.description,
+        category: updatedExpense.category,
+        date: updatedExpense.date,
+        notes: updatedExpense.notes,
+        image: updatedExpense.image,
+      });
+      setEditingExpense(null);
+      setShowEditModal(false);
+    }
   };
 
   const filteredExpenses = expenses
@@ -130,24 +168,42 @@ export default function ExpensesScreen() {
       {/* Expenses List */}
       <ScrollView className="mt-4 flex-1 px-6" showsVerticalScrollIndicator={false}>
         {filteredExpenses.map((expense) => (
-          <TouchableOpacity
+          <View
             key={expense.id}
-            className="border-border bg-secondary mb-3 flex-row items-center rounded-lg border p-4">
-            <View className="bg-accent mr-4 h-12 w-12 items-center justify-center rounded-full">
-              <Ionicons name={getCategoryIcon(expense.category) as any} size={24} color="#FFFFFF" />
+            className="border-border bg-secondary mb-3 rounded-lg border overflow-hidden">
+            <View className="flex-row items-center p-4">
+              <View className="bg-accent mr-4 h-12 w-12 items-center justify-center rounded-full">
+                <Ionicons name={getCategoryIcon(expense.category) as any} size={24} color="#FFFFFF" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-foreground font-semibold">{expense.description}</Text>
+                <Text className="text-muted-foreground mt-1 text-sm">
+                  {getCategoryName(expense.category)} • {expense.date}
+                </Text>
+              </View>
+              <View className="items-end">
+                <Text className="text-foreground text-lg font-bold">
+                  ${expense.amount.toFixed(2)}
+                </Text>
+              </View>
             </View>
-            <View className="flex-1">
-              <Text className="text-foreground font-semibold">{expense.description}</Text>
-              <Text className="text-muted-foreground mt-1 text-sm">
-                {getCategoryName(expense.category)} • {expense.date}
-              </Text>
+            
+            {/* Action Buttons */}
+            <View className="flex-row border-t border-border">
+              <TouchableOpacity
+                onPress={() => handleEditExpense(expense)}
+                className="flex-1 flex-row items-center justify-center py-3 border-r border-border">
+                <Ionicons name="create-outline" size={18} color="#FFFFFF" />
+                <Text className="ml-2 text-sm text-foreground font-medium">Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleDeleteExpense(expense)}
+                className="flex-1 flex-row items-center justify-center py-3">
+                <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                <Text className="ml-2 text-sm text-red-500 font-medium">Delete</Text>
+              </TouchableOpacity>
             </View>
-            <View className="items-end">
-              <Text className="text-foreground text-lg font-bold">
-                ${expense.amount.toFixed(2)}
-              </Text>
-            </View>
-          </TouchableOpacity>
+          </View>
         ))}
 
         {filteredExpenses.length === 0 && (
@@ -163,6 +219,19 @@ export default function ExpensesScreen() {
         {/* Bottom Spacing for Tab Bar */}
         <View className="h-10" />
       </ScrollView>
+
+      {/* Edit Expense Modal */}
+      {editingExpense && (
+        <AddExpenseScreen
+          visible={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingExpense(null);
+          }}
+          onSave={handleUpdateExpense}
+          initialData={editingExpense}
+        />
+      )}
     </View>
   );
 }

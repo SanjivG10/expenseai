@@ -1,15 +1,15 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { authService } from '../services/authService';
+import { ValidationError } from '../utils/errors';
 import {
-  validateSchema,
-  signupSchema,
-  loginSchema,
   forgotPasswordSchema,
-  resetPasswordSchema,
+  loginSchema,
   refreshTokenSchema,
+  resetPasswordSchema,
+  signupSchema,
   updateProfileSchema,
+  validateSchema,
 } from '../utils/validation';
-import { AppError, ValidationError } from '../utils/errors';
 
 export class AuthController {
   // User signup
@@ -130,11 +130,9 @@ export class AuthController {
   }
 
   // Logout user
-  async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async logout(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const validatedData = validateSchema(refreshTokenSchema, req.body);
-
-      await authService.logout(validatedData.refreshToken);
+      await authService.logout();
 
       res.json({
         success: true,

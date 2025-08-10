@@ -224,17 +224,11 @@ export class AuthService {
   }
 
   // Logout user (invalidate refresh token)
-  async logout(refreshToken: string): Promise<void> {
+  async logout(): Promise<void> {
     try {
-      // In a full implementation, you'd maintain a blacklist of invalidated tokens
-      // For now, we'll just validate the token exists
-      jwt.verify(refreshToken, env.JWT_REFRESH_SECRET);
-
-      // Sign out from Supabase
       await supabase.auth.signOut();
     } catch (error) {
-      // Even if token verification fails, we consider logout successful
-      // This prevents issues with already expired tokens
+      throw new AppError('Logout failed', 500, 'LOGOUT_ERROR', error);
     }
   }
 

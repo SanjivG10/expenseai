@@ -31,17 +31,6 @@ CREATE TABLE IF NOT EXISTS expenses (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- User Preferences Table (for app-specific settings)
-CREATE TABLE IF NOT EXISTS user_preferences (
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-  default_category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
-  budget_monthly DECIMAL(12,2),
-  budget_enabled BOOLEAN DEFAULT false,
-  export_format VARCHAR(20) DEFAULT 'CSV',
-  theme VARCHAR(20) DEFAULT 'dark',
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_expenses_user_id ON expenses(user_id);
@@ -53,7 +42,6 @@ CREATE INDEX IF NOT EXISTS idx_categories_user_id ON categories(user_id);
 -- Enable Row Level Security
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for categories
 CREATE POLICY "Users can view own categories" 
@@ -89,18 +77,6 @@ CREATE POLICY "Users can delete own expenses"
   ON expenses FOR DELETE 
   USING (auth.uid() = user_id);
 
--- RLS Policies for user_preferences
-CREATE POLICY "Users can view own preferences" 
-  ON user_preferences FOR SELECT 
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own preferences" 
-  ON user_preferences FOR UPDATE 
-  USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own preferences" 
-  ON user_preferences FOR INSERT 
-  WITH CHECK (auth.uid() = user_id);
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -118,8 +94,4 @@ CREATE TRIGGER update_categories_updated_at
 
 CREATE TRIGGER update_expenses_updated_at 
   BEFORE UPDATE ON expenses 
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_user_preferences_updated_at 
-  BEFORE UPDATE ON user_preferences 
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

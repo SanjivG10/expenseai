@@ -5,7 +5,6 @@ import {
   signupSchema,
   loginSchema,
   forgotPasswordSchema,
-  verifyOTPSchema,
   resetPasswordSchema,
   refreshTokenSchema,
   updateProfileSchema,
@@ -17,7 +16,7 @@ export class AuthController {
   async signup(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const validatedData = validateSchema(signupSchema, req.body);
-      
+
       const result = await authService.signup(validatedData);
 
       res.status(201).json({
@@ -42,7 +41,7 @@ export class AuthController {
   async login(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const validatedData = validateSchema(loginSchema, req.body);
-      
+
       const result = await authService.login(validatedData);
 
       res.json({
@@ -67,12 +66,12 @@ export class AuthController {
   async forgotPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const validatedData = validateSchema(forgotPasswordSchema, req.body);
-      
+
       await authService.forgotPassword(validatedData.email);
 
       res.json({
         success: true,
-        message: 'Password reset instructions sent to your email',
+        message: 'Password reset OTP sent to your email',
         data: null,
       });
     } catch (error) {
@@ -84,38 +83,16 @@ export class AuthController {
     }
   }
 
-  // Verify OTP
-  async verifyOTP(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const validatedData = validateSchema(verifyOTPSchema, req.body);
-      
-      await authService.verifyOTP(validatedData.email, validatedData.token);
-
-      res.json({
-        success: true,
-        message: 'OTP verified successfully',
-        data: null,
-      });
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('Validation failed')) {
-        next(new ValidationError(error.message));
-      } else {
-        next(error);
-      }
-    }
-  }
-
-  // Reset password
+  // Reset password with OTP (combined endpoint)
   async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const validatedData = validateSchema(resetPasswordSchema, req.body);
-      const accessToken = req.headers.authorization?.replace('Bearer ', '');
 
-      if (!accessToken) {
-        throw new AppError('Access token required', 401, 'MISSING_TOKEN');
-      }
-      
-      await authService.resetPassword(accessToken, validatedData.password);
+      await authService.resetPasswordWithOTP(
+        validatedData.email,
+        validatedData.otp,
+        validatedData.password
+      );
 
       res.json({
         success: true,
@@ -135,7 +112,7 @@ export class AuthController {
   async refreshToken(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const validatedData = validateSchema(refreshTokenSchema, req.body);
-      
+
       const tokens = await authService.refreshToken(validatedData.refreshToken);
 
       res.json({
@@ -156,7 +133,7 @@ export class AuthController {
   async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const validatedData = validateSchema(refreshTokenSchema, req.body);
-      
+
       await authService.logout(validatedData.refreshToken);
 
       res.json({
@@ -192,9 +169,12 @@ export class AuthController {
   async updateProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const validatedData = validateSchema(updateProfileSchema, req.body);
-      const user = (req as any).user; // Set by auth middleware
-      
-      const updatedUser = await authService.updateProfile(user.id, validatedData);
+      const user = (req as any).user;
+
+      const updatedUser = await authService.updateProfile(user.id, {
+        firstName: validatedData.firstName || '',
+        lastName: validatedData.lastName || '',
+      });
 
       res.json({
         success: true,

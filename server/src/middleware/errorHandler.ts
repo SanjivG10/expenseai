@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
-import { AppError, isOperationalError } from '../utils/errors';
+import { NextFunction, Request, Response } from 'express';
 import env from '../config/env';
+import { AppError } from '../utils/errors';
 
 interface ErrorResponse {
   success: false;
@@ -91,22 +91,14 @@ export const errorHandler = (
 
   // Include stack trace in development
   if (env.NODE_ENV === 'development') {
-    response.stack = error.stack;
+    response.stack = error.stack || '';
   }
 
   res.status(500).json(response);
 };
 
-export const notFoundHandler = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
-  const error = new AppError(
-    `Route ${req.originalUrl} not found`,
-    404,
-    'ROUTE_NOT_FOUND'
-  );
+export const notFoundHandler = (req: Request, res: Response, next: NextFunction): void => {
+  const error = new AppError(`Route ${req.originalUrl} not found`, 404, 'ROUTE_NOT_FOUND');
   next(error);
 };
 

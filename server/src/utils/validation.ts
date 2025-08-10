@@ -45,6 +45,8 @@ export const verifyOTPSchema = z.object({
 });
 
 export const resetPasswordSchema = z.object({
+  email: emailSchema,
+  otp: z.string().min(6, 'OTP must be at least 6 characters').max(10, 'OTP must not exceed 10 characters'),
   password: passwordSchema,
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {

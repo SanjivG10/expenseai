@@ -1,14 +1,8 @@
-import { AuthResponse, User as SupabaseUser } from '@supabase/supabase-js';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
-import { supabase, supabaseAdmin } from '../config/supabase';
 import env from '../config/env';
-import { 
-  AppError, 
-  AuthenticationError, 
-  ValidationError,
-  DuplicateError 
-} from '../utils/errors';
+import { supabase, supabaseAdmin } from '../config/supabase';
+import { AppError, AuthenticationError, DuplicateError } from '../utils/errors';
 
 export interface User {
   id: string;
@@ -46,17 +40,9 @@ export class AuthService {
       email: user.email,
     };
 
-    const accessToken = jwt.sign(payload, env.JWT_SECRET, {
-      expiresIn: env.JWT_EXPIRES_IN,
-      issuer: 'expenseai-api',
-      audience: 'expenseai-app',
-    });
+    const accessToken = jwt.sign(payload, env.JWT_SECRET);
 
-    const refreshToken = jwt.sign(payload, env.JWT_REFRESH_SECRET, {
-      expiresIn: env.JWT_REFRESH_EXPIRES_IN,
-      issuer: 'expenseai-api',
-      audience: 'expenseai-app',
-    });
+    const refreshToken = jwt.sign(payload, env.JWT_REFRESH_SECRET);
 
     return { accessToken, refreshToken };
   }
@@ -103,12 +89,7 @@ export class AuthService {
       });
 
       if (error) {
-        throw new AppError(
-          'Failed to create user account',
-          400,
-          'SIGNUP_FAILED',
-          error
-        );
+        throw new AppError('Failed to create user account', 400, 'SIGNUP_FAILED', error);
       }
 
       if (!data.user) {
@@ -127,12 +108,7 @@ export class AuthService {
       if (error instanceof AppError) {
         throw error;
       }
-      throw new AppError(
-        'Signup failed',
-        500,
-        'SIGNUP_ERROR',
-        error
-      );
+      throw new AppError('Signup failed', 500, 'SIGNUP_ERROR', error);
     }
   }
 
@@ -171,13 +147,11 @@ export class AuthService {
   async forgotPassword(email: string): Promise<void> {
     try {
       // Use Supabase's OTP system for password reset
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${process.env.FRONTEND_URL}/reset-password`,
-      });
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
 
       if (error) {
         throw new AppError(
-          'Failed to send password reset email',
+          error.message || 'Failed to send password reset OTP',
           400,
           'PASSWORD_RESET_FAILED',
           error
@@ -187,67 +161,37 @@ export class AuthService {
       if (error instanceof AppError) {
         throw error;
       }
-      throw new AppError(
-        'Password reset failed',
-        500,
-        'PASSWORD_RESET_ERROR',
-        error
-      );
+      throw new AppError('Password reset failed', 500, 'PASSWORD_RESET_ERROR', error);
     }
   }
 
-  // Verify OTP for password reset
-  async verifyOTP(email: string, token: string): Promise<void> {
+  // Reset password with OTP and new password (combined endpoint)
+  async resetPasswordWithOTP(email: string, otp: string, newPassword: string): Promise<void> {
     try {
-      // Verify OTP using Supabase
+      // Verify OTP and update password in one step
       const { error } = await supabase.auth.verifyOtp({
         email,
-        token,
-        type: 'recovery',
+        token: otp,
+        type: 'magiclink',
       });
 
       if (error) {
         throw new AppError('Invalid or expired OTP', 400, 'INVALID_OTP', error);
       }
-    } catch (error) {
-      if (error instanceof AppError) {
-        throw error;
-      }
-      throw new AppError(
-        'OTP verification failed',
-        500,
-        'OTP_VERIFICATION_ERROR',
-        error
-      );
-    }
-  }
 
-  // Reset password with new password
-  async resetPassword(accessToken: string, newPassword: string): Promise<void> {
-    try {
-      // Update password using Supabase
-      const { error } = await supabase.auth.updateUser({
+      // Now update the password
+      const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword,
       });
 
-      if (error) {
-        throw new AppError(
-          'Failed to reset password',
-          400,
-          'PASSWORD_RESET_FAILED',
-          error
-        );
+      if (updateError) {
+        throw new AppError('Failed to update password', 400, 'PASSWORD_UPDATE_FAILED', updateError);
       }
     } catch (error) {
       if (error instanceof AppError) {
         throw error;
       }
-      throw new AppError(
-        'Password reset failed',
-        500,
-        'PASSWORD_RESET_ERROR',
-        error
-      );
+      throw new AppError('Password reset failed', 500, 'PASSWORD_RESET_ERROR', error);
     }
   }
 
@@ -256,12 +200,9 @@ export class AuthService {
     try {
       // Verify refresh token
       const decoded = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as any;
-      
+
       // Get user from Supabase
-      const { data: userData, error } = await supabaseAdmin
-        .auth
-        .admin
-        .getUserById(decoded.userId);
+      const { data: userData, error } = await supabaseAdmin.auth.admin.getUserById(decoded.userId);
 
       if (error || !userData.user) {
         throw new AuthenticationError('Invalid refresh token');
@@ -275,12 +216,7 @@ export class AuthService {
       if (error instanceof jwt.JsonWebTokenError) {
         throw new AuthenticationError('Invalid refresh token');
       }
-      throw new AppError(
-        'Token refresh failed',
-        500,
-        'TOKEN_REFRESH_ERROR',
-        error
-      );
+      throw new AppError('Token refresh failed', 500, 'TOKEN_REFRESH_ERROR', error);
     }
   }
 
@@ -290,7 +226,7 @@ export class AuthService {
       // In a full implementation, you'd maintain a blacklist of invalidated tokens
       // For now, we'll just validate the token exists
       jwt.verify(refreshToken, env.JWT_REFRESH_SECRET);
-      
+
       // Sign out from Supabase
       await supabase.auth.signOut();
     } catch (error) {
@@ -302,10 +238,7 @@ export class AuthService {
   // Get user by ID
   async getUserById(userId: string): Promise<User | null> {
     try {
-      const { data, error } = await supabaseAdmin
-        .auth
-        .admin
-        .getUserById(userId);
+      const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId);
 
       if (error || !data.user) {
         return null;
@@ -328,25 +261,23 @@ export class AuthService {
   }
 
   // Update user profile
-  async updateProfile(userId: string, updates: Partial<Pick<User, 'firstName' | 'lastName'>>): Promise<User> {
+  async updateProfile(
+    userId: string,
+    updates: {
+      firstName?: string;
+      lastName?: string;
+    }
+  ): Promise<User> {
     try {
-      const { data, error } = await supabaseAdmin
-        .auth
-        .admin
-        .updateUserById(userId, {
-          user_metadata: {
-            firstName: updates.firstName,
-            lastName: updates.lastName,
-          }
-        });
+      const { data, error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        user_metadata: {
+          firstName: updates.firstName,
+          lastName: updates.lastName,
+        },
+      });
 
       if (error || !data.user) {
-        throw new AppError(
-          'Failed to update user profile',
-          400,
-          'PROFILE_UPDATE_FAILED',
-          error
-        );
+        throw new AppError('Failed to update user profile', 400, 'PROFILE_UPDATE_FAILED', error);
       }
 
       return this.mapSupabaseUser(data.user, updates);
@@ -354,12 +285,7 @@ export class AuthService {
       if (error instanceof AppError) {
         throw error;
       }
-      throw new AppError(
-        'Profile update failed',
-        500,
-        'PROFILE_UPDATE_ERROR',
-        error
-      );
+      throw new AppError('Profile update failed', 500, 'PROFILE_UPDATE_ERROR', error);
     }
   }
 }

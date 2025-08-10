@@ -41,9 +41,15 @@ export class AuthService {
       email: user.email,
     };
 
-    const accessToken = jwt.sign(payload, env.JWT_SECRET);
+    // Access token expires in 6 months
+    const accessToken = jwt.sign(payload, env.JWT_SECRET, {
+      expiresIn: '0.5y',
+    });
 
-    const refreshToken = jwt.sign(payload, env.JWT_REFRESH_SECRET);
+    // Refresh token expires in 1 year
+    const refreshToken = jwt.sign(payload, env.JWT_REFRESH_SECRET, {
+      expiresIn: '1y',
+    });
 
     return { accessToken, refreshToken };
   }

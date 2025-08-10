@@ -62,19 +62,19 @@ export default function AnalyticsScreen() {
   ];
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="bg-background flex-1">
       <StatusBar style="light" backgroundColor="#000000" />
 
       {/* Header */}
-      <View className="border-b border-border px-6 pb-4 pt-14">
-        <Text className="text-2xl font-bold text-foreground">Analytics</Text>
-        <Text className="mt-1 text-sm text-muted-foreground">Spending insights and trends</Text>
+      <View className="border-border border-b px-6 pb-4 pt-14">
+        <Text className="text-foreground text-2xl font-bold">Analytics</Text>
+        <Text className="text-muted-foreground mt-1 text-sm">Spending insights and trends</Text>
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Period Selector */}
         <View className="mx-6 mt-6">
-          <View className="flex-row rounded-lg border border-border bg-secondary p-1">
+          <View className="border-border bg-secondary flex-row rounded-lg border p-1">
             {(['week', 'month', 'year'] as const).map((period) => (
               <TouchableOpacity
                 key={period}
@@ -96,7 +96,7 @@ export default function AnalyticsScreen() {
         {/* Stats Cards */}
         <View className="mx-6 mt-6 flex-row flex-wrap gap-3">
           {stats.map((stat, index) => (
-            <View key={index} className="w-[48%] rounded-lg border border-border bg-secondary p-4">
+            <View key={index} className="border-border bg-secondary w-[48%] rounded-lg border p-4">
               <View className="mb-2 flex-row items-center justify-between">
                 <Ionicons name={stat.icon as any} size={20} color="#a3a3a3" />
                 <Text
@@ -106,16 +106,16 @@ export default function AnalyticsScreen() {
                   {stat.change}
                 </Text>
               </View>
-              <Text className="text-xl font-bold text-foreground">{stat.value}</Text>
-              <Text className="text-sm text-muted-foreground">{stat.label}</Text>
+              <Text className="text-foreground text-xl font-bold">{stat.value}</Text>
+              <Text className="text-muted-foreground text-sm">{stat.label}</Text>
             </View>
           ))}
         </View>
 
         {/* Spending Trend Chart */}
         <View className="mx-6 mt-6">
-          <Text className="mb-4 text-lg font-semibold text-foreground">Spending Trend</Text>
-          <View className="overflow-hidden rounded-lg border border-border bg-secondary">
+          <Text className="text-foreground mb-4 text-lg font-semibold">Spending Trend</Text>
+          <View className="border-border bg-secondary overflow-hidden rounded-lg border">
             <LineChart
               data={spendingTrendData}
               width={screenWidth - 48}
@@ -129,8 +129,8 @@ export default function AnalyticsScreen() {
 
         {/* Category Breakdown */}
         <View className="mx-6 mt-6">
-          <Text className="mb-4 text-lg font-semibold text-foreground">Category Breakdown</Text>
-          <View className="rounded-lg border border-border bg-secondary p-4">
+          <Text className="text-foreground mb-4 text-lg font-semibold">Category Breakdown</Text>
+          <View className="border-border bg-secondary rounded-lg border p-4">
             <PieChart
               data={categoryBreakdown}
               width={screenWidth - 80}
@@ -154,8 +154,8 @@ export default function AnalyticsScreen() {
                     <Text className="text-foreground">{category.name}</Text>
                   </View>
                   <View className="items-end">
-                    <Text className="font-semibold text-foreground">${category.amount}</Text>
-                    <Text className="text-sm text-muted-foreground">
+                    <Text className="text-foreground font-semibold">${category.amount}</Text>
+                    <Text className="text-muted-foreground text-sm">
                       {((category.amount / totalSpent) * 100).toFixed(1)}%
                     </Text>
                   </View>
@@ -167,8 +167,8 @@ export default function AnalyticsScreen() {
 
         {/* Monthly Comparison */}
         <View className="mx-6 mb-8 mt-6">
-          <Text className="mb-4 text-lg font-semibold text-foreground">Monthly Comparison</Text>
-          <View className="overflow-hidden rounded-lg border border-border bg-secondary">
+          <Text className="text-foreground mb-4 text-lg font-semibold">Monthly Comparison</Text>
+          <View className="border-border bg-secondary overflow-hidden rounded-lg border">
             <BarChart
               data={categoryData}
               width={screenWidth - 48}
@@ -180,9 +180,9 @@ export default function AnalyticsScreen() {
             />
           </View>
         </View>
-        
+
         {/* Bottom Spacing for Tab Bar */}
-        <View className="h-24" />
+        <View className="h-10" />
       </ScrollView>
     </View>
   );

@@ -43,25 +43,25 @@ export default function ExpensesScreen() {
     });
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="bg-background flex-1">
       <StatusBar style="light" backgroundColor="#000000" />
 
       {/* Header */}
-      <View className="border-b border-border px-6 pb-4 pt-14">
-        <Text className="text-2xl font-bold text-foreground">Expenses</Text>
-        <Text className="mt-1 text-sm text-muted-foreground">{expenses.length} transactions</Text>
+      <View className="border-border border-b px-6 pb-4 pt-14">
+        <Text className="text-foreground text-2xl font-bold">Expenses</Text>
+        <Text className="text-muted-foreground mt-1 text-sm">{expenses.length} transactions</Text>
       </View>
 
       {/* Search Bar */}
       <View className="mx-6 mt-4">
-        <View className="flex-row items-center rounded-lg border border-border bg-input px-4 py-3">
+        <View className="border-border bg-input flex-row items-center rounded-lg border px-4 py-3">
           <Ionicons name="search-outline" size={20} color="#a3a3a3" />
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholder="Search expenses..."
             placeholderTextColor="#a3a3a3"
-            className="ml-3 flex-1 text-foreground"
+            className="text-foreground ml-3 flex-1"
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
@@ -118,7 +118,7 @@ export default function ExpensesScreen() {
               />
               <Text
                 className={`ml-2 text-sm ${
-                  sortBy === option.key ? 'font-medium text-foreground' : 'text-muted-foreground'
+                  sortBy === option.key ? 'text-foreground font-medium' : 'text-muted-foreground'
                 }`}>
                 {option.label}
               </Text>
@@ -132,18 +132,18 @@ export default function ExpensesScreen() {
         {filteredExpenses.map((expense) => (
           <TouchableOpacity
             key={expense.id}
-            className="mb-3 flex-row items-center rounded-lg border border-border bg-secondary p-4">
-            <View className="mr-4 h-12 w-12 items-center justify-center rounded-full bg-accent">
+            className="border-border bg-secondary mb-3 flex-row items-center rounded-lg border p-4">
+            <View className="bg-accent mr-4 h-12 w-12 items-center justify-center rounded-full">
               <Ionicons name={getCategoryIcon(expense.category) as any} size={24} color="#FFFFFF" />
             </View>
             <View className="flex-1">
-              <Text className="font-semibold text-foreground">{expense.description}</Text>
-              <Text className="mt-1 text-sm text-muted-foreground">
+              <Text className="text-foreground font-semibold">{expense.description}</Text>
+              <Text className="text-muted-foreground mt-1 text-sm">
                 {getCategoryName(expense.category)} • {expense.date}
               </Text>
             </View>
             <View className="items-end">
-              <Text className="text-lg font-bold text-foreground">
+              <Text className="text-foreground text-lg font-bold">
                 ${expense.amount.toFixed(2)}
               </Text>
             </View>
@@ -153,15 +153,15 @@ export default function ExpensesScreen() {
         {filteredExpenses.length === 0 && (
           <View className="items-center justify-center py-12">
             <Ionicons name="search-outline" size={64} color="#404040" />
-            <Text className="mt-4 text-lg text-muted-foreground">No expenses found</Text>
-            <Text className="mt-2 text-center text-sm text-muted-foreground">
+            <Text className="text-muted-foreground mt-4 text-lg">No expenses found</Text>
+            <Text className="text-muted-foreground mt-2 text-center text-sm">
               Try adjusting your search or filter criteria
             </Text>
           </View>
         )}
 
         {/* Bottom Spacing for Tab Bar */}
-        <View className="h-24" />
+        <View className="h-10" />
       </ScrollView>
     </View>
   );

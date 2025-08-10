@@ -10,7 +10,6 @@ import { format } from 'date-fns';
 
 export default function DashboardScreen() {
   const [showAddExpense, setShowAddExpense] = useState(false);
-  const [selectedCalendarExpenses, setSelectedCalendarExpenses] = useState<Expense[]>([]);
   const [showCalendarView, setShowCalendarView] = useState(false);
   const { expenses, addExpense, categories } = useExpenseStore();
   const navigation = useNavigation();
@@ -27,8 +26,8 @@ export default function DashboardScreen() {
     return categories.find((cat) => cat.id === categoryId)?.name || categoryId;
   };
 
-  const handleCalendarDaySelect = (date: Date, dayExpenses: Expense[]) => {
-    setSelectedCalendarExpenses(dayExpenses);
+  const handleCalendarDaySelect = () => {
+    // Calendar day selection handled within CalendarView component
   };
 
   const handleViewAllExpenses = () => {
@@ -37,19 +36,19 @@ export default function DashboardScreen() {
   };
 
   return (
-    <View className="bg-background flex-1">
+    <View className="flex-1 bg-background">
       <StatusBar style="light" backgroundColor="#000000" />
 
       {/* Header */}
-      <View className="border-border border-b px-6 pb-6 pt-14">
+      <View className="border-b border-border px-6 pb-6 pt-14">
         <View className="flex-row items-center justify-between">
           <View>
-            <Text className="text-foreground text-2xl font-bold">Dashboard</Text>
-            <Text className="text-muted-foreground mt-1 text-sm">{currentMonthName}</Text>
+            <Text className="text-2xl font-bold text-foreground">Dashboard</Text>
+            <Text className="mt-1 text-sm text-muted-foreground">{currentMonthName}</Text>
           </View>
           <TouchableOpacity
             onPress={() => setShowCalendarView(!showCalendarView)}
-            className={`rounded-lg p-3 ${showCalendarView ? 'bg-primary' : 'bg-secondary border-border border'}`}>
+            className={`rounded-lg p-3 ${showCalendarView ? 'bg-primary' : 'border border-border bg-secondary'}`}>
             <Ionicons
               name="calendar-outline"
               size={20}
@@ -68,31 +67,31 @@ export default function DashboardScreen() {
         )}
         {/* Monthly Overview Card */}
         {!showCalendarView && (
-          <View className="border-border bg-secondary mx-6 mt-6 rounded-lg border p-6">
+          <View className="mx-6 mt-6 rounded-lg border border-border bg-secondary p-6">
             <View className="mb-4 flex-row items-center justify-between">
-              <Text className="text-foreground text-lg font-semibold">This Month</Text>
+              <Text className="text-lg font-semibold text-foreground">This Month</Text>
               <Ionicons name="trending-up-outline" size={24} color="#FFFFFF" />
             </View>
-            <Text className="text-foreground text-3xl font-bold">${monthlyTotal.toFixed(2)}</Text>
-            <Text className="text-muted-foreground mt-1 text-sm">Total spent</Text>
+            <Text className="text-3xl font-bold text-foreground">${monthlyTotal.toFixed(2)}</Text>
+            <Text className="mt-1 text-sm text-muted-foreground">Total spent</Text>
           </View>
         )}
         {/* Quick Stats */}
         {!showCalendarView && (
           <View className="mx-6 mt-4 flex-row gap-3">
-            <View className="border-border bg-secondary flex-1 rounded-lg border p-4">
-              <Text className="text-muted-foreground text-sm">Categories</Text>
-              <Text className="text-foreground mt-1 text-xl font-bold">{categories.length}</Text>
+            <View className="flex-1 rounded-lg border border-border bg-secondary p-4">
+              <Text className="text-sm text-muted-foreground">Categories</Text>
+              <Text className="mt-1 text-xl font-bold text-foreground">{categories.length}</Text>
             </View>
-            <View className="border-border bg-secondary flex-1 rounded-lg border p-4">
-              <Text className="text-muted-foreground text-sm">Transactions</Text>
-              <Text className="text-foreground mt-1 text-xl font-bold">
+            <View className="flex-1 rounded-lg border border-border bg-secondary p-4">
+              <Text className="text-sm text-muted-foreground">Transactions</Text>
+              <Text className="mt-1 text-xl font-bold text-foreground">
                 {monthlyExpenses.length}
               </Text>
             </View>
-            <View className="border-border bg-secondary flex-1 rounded-lg border p-4">
-              <Text className="text-muted-foreground text-sm">Avg/Day</Text>
-              <Text className="text-foreground mt-1 text-xl font-bold">
+            <View className="flex-1 rounded-lg border border-border bg-secondary p-4">
+              <Text className="text-sm text-muted-foreground">Avg/Day</Text>
+              <Text className="mt-1 text-xl font-bold text-foreground">
                 ${monthlyExpenses.length > 0 ? (monthlyTotal / 10).toFixed(0) : '0'}
               </Text>
             </View>
@@ -101,43 +100,43 @@ export default function DashboardScreen() {
         {/* Recent Expenses */}
         <View className="mx-6 mt-6">
           <View className="mb-4 flex-row items-center justify-between">
-            <Text className="text-foreground text-lg font-semibold">Recent Expenses</Text>
+            <Text className="text-lg font-semibold text-foreground">Recent Expenses</Text>
             <TouchableOpacity onPress={handleViewAllExpenses}>
-              <Text className="text-primary text-sm">View All</Text>
+              <Text className="text-sm text-primary">View All</Text>
             </TouchableOpacity>
           </View>
 
           {recentExpenses.map((expense) => (
             <TouchableOpacity
               key={expense.id}
-              className="border-border bg-secondary mb-3 flex-row items-center rounded-lg border p-4">
-              <View className="bg-accent mr-3 h-10 w-10 items-center justify-center rounded-full">
+              className="mb-3 flex-row items-center rounded-lg border border-border bg-secondary p-4">
+              <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-accent">
                 <Ionicons name="receipt-outline" size={20} color="#FFFFFF" />
               </View>
               <View className="flex-1">
-                <Text className="text-foreground font-medium">{expense.description}</Text>
-                <Text className="text-muted-foreground text-sm">
+                <Text className="font-medium text-foreground">{expense.description}</Text>
+                <Text className="text-sm text-muted-foreground">
                   {getCategoryName(expense.category)} • {expense.date}
                 </Text>
               </View>
-              <Text className="text-foreground font-bold">${expense.amount.toFixed(2)}</Text>
+              <Text className="font-bold text-foreground">${expense.amount.toFixed(2)}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
         {!showCalendarView && (
           <View className="mx-6 mt-6">
-            <Text className="text-foreground mb-4 text-lg font-semibold">Quick Actions</Text>
+            <Text className="mb-4 text-lg font-semibold text-foreground">Quick Actions</Text>
             <View className="flex-row gap-3">
-              <TouchableOpacity className="bg-primary flex-1 items-center rounded-lg p-4">
+              <TouchableOpacity className="flex-1 items-center rounded-lg bg-primary p-4">
                 <Ionicons name="camera-outline" size={24} color="#000000" />
-                <Text className="text-primary-foreground mt-2 font-medium">Scan Receipt</Text>
+                <Text className="mt-2 font-medium text-primary-foreground">Scan Receipt</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setShowAddExpense(true)}
-                className="border-border bg-secondary flex-1 items-center rounded-lg border p-4">
+                className="flex-1 items-center rounded-lg border border-border bg-secondary p-4">
                 <Ionicons name="add-outline" size={24} color="#FFFFFF" />
-                <Text className="text-foreground mt-2 font-medium">Add Manual</Text>
+                <Text className="mt-2 font-medium text-foreground">Add Manual</Text>
               </TouchableOpacity>
             </View>
           </View>

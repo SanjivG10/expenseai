@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { jwtDecode } from 'jwt-decode';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import Toast from 'react-native-toast-message';
 import { API_ENDPOINTS } from '../constants/api';
 import { apiService } from '../services/api';
-import { jwtDecode } from 'jwt-decode';
 
 export interface User {
   id: string;
@@ -79,12 +79,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           user,
           token: storedToken,
           isLoading: false,
-          isAuthenticated: false,
-          // isAuthenticated: true,
+          isAuthenticated: true,
         });
-
-        // Validate token with backend (optional)
-        // await validateToken(storedToken);
       } else {
         setAuthState((prev) => ({
           ...prev,
@@ -113,12 +109,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         throw new Error(response.message || 'Login failed');
       }
 
-      const { user, accessToken } = response.data;
+      const { user, accessToken, refreshToken } = response.data;
 
       // Store auth data
       await Promise.all([
         AsyncStorage.setItem(STORAGE_KEYS.TOKEN, accessToken),
         AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user)),
+        refreshToken && AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken),
       ]);
 
       setAuthState({
@@ -167,12 +164,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         throw new Error(response.message || 'Signup failed');
       }
 
-      const { user, accessToken } = response.data;
+      const { user, accessToken, refreshToken } = response.data;
 
       // Store auth data
       await Promise.all([
         AsyncStorage.setItem(STORAGE_KEYS.TOKEN, accessToken),
         AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user)),
+        refreshToken && AsyncStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken),
       ]);
 
       setAuthState({
@@ -298,45 +296,39 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const updateProfile = async (userData: Partial<User>): Promise<void> => {
-    if (!authState.user) {
-      throw new Error('User not authenticated');
-    }
-
-    try {
-      // TODO: Replace with actual API call
-      // const response = await fetch(`${API_BASE_URL}/users/profile`, {
-      //   method: 'PUT',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': `Bearer ${authState.token}`,
-      //   },
-      //   body: JSON.stringify(userData),
-      // });
-
-      // if (!response.ok) {
-      //   throw new Error('Failed to update profile');
-      // }
-
-      // const updatedUser = await response.json();
-
-      // Mock response for development
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      const updatedUser = {
-        ...authState.user,
-        ...userData,
-        updatedAt: new Date().toISOString(),
-      };
-
-      // Update stored user data
-      await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updatedUser));
-
-      setAuthState((prev) => ({
-        ...prev,
-        user: updatedUser,
-      }));
-    } catch (error) {
-      throw error;
-    }
+    // if (!authState.user) {
+    //   throw new Error('User not authenticated');
+    // }
+    // try {
+    //   // TODO: Replace with actual API call
+    //   // const response = await fetch(`${API_BASE_URL}/users/profile`, {
+    //   //   method: 'PUT',
+    //   //   headers: {
+    //   //     'Content-Type': 'application/json',
+    //   //     'Authorization': `Bearer ${authState.token}`,
+    //   //   },
+    //   //   body: JSON.stringify(userData),
+    //   // });
+    //   // if (!response.ok) {
+    //   //   throw new Error('Failed to update profile');
+    //   // }
+    //   // const updatedUser = await response.json();
+    //   // Mock response for development
+    //   await new Promise((resolve) => setTimeout(resolve, 1000));
+    //   const updatedUser = {
+    //     ...authState.user,
+    //     ...userData,
+    //     updatedAt: new Date().toISOString(),
+    //   };
+    //   // Update stored user data
+    //   await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updatedUser));
+    //   setAuthState((prev) => ({
+    //     ...prev,
+    //     user: updatedUser,
+    //   }));
+    // } catch (error) {
+    //   throw error;
+    // }
   };
 
   const refreshToken = async (): Promise<void> => {
@@ -392,6 +384,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
+
+  console.log('context', context);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }

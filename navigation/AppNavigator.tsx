@@ -10,7 +10,7 @@ export default function AppNavigator() {
   // Show loading screen while checking authentication state
   if (isLoading) {
     return (
-      <View className="flex-1 bg-background items-center justify-center">
+      <View className="flex-1 items-center justify-center bg-background">
         <ActivityIndicator size="large" color="#FFFFFF" />
       </View>
     );

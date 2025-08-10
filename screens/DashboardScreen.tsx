@@ -27,8 +27,9 @@ export default function DashboardScreen() {
       else setIsLoading(true);
 
       const response = await apiService.getDashboardData();
-      
+
       if (response.success) {
+        console.log('Dashboard data:', response.data);
         setDashboardData(response.data);
       } else {
         Alert.alert('Error', response.message || 'Failed to load dashboard data');
@@ -67,7 +68,7 @@ export default function DashboardScreen() {
   // Loading state
   if (isLoading && !dashboardData) {
     return (
-      <View className="flex-1 bg-background items-center justify-center">
+      <View className="flex-1 items-center justify-center bg-background">
         <StatusBar style="light" backgroundColor="#000000" />
         <Ionicons name="refresh-outline" size={48} color="#404040" />
         <Text className="mt-4 text-lg text-muted-foreground">Loading dashboard...</Text>
@@ -98,8 +99,8 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      <ScrollView 
-        className="flex-1" 
+      <ScrollView
+        className="flex-1"
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -181,7 +182,9 @@ export default function DashboardScreen() {
             <View className="items-center py-8">
               <Ionicons name="receipt-outline" size={48} color="#404040" />
               <Text className="mt-4 text-muted-foreground">No expenses yet</Text>
-              <Text className="text-sm text-muted-foreground">Add your first expense to get started</Text>
+              <Text className="text-sm text-muted-foreground">
+                Add your first expense to get started
+              </Text>
             </View>
           )}
         </View>
@@ -190,7 +193,7 @@ export default function DashboardScreen() {
           <View className="mx-6 mt-6">
             <Text className="mb-4 text-lg font-semibold text-foreground">Quick Actions</Text>
             <View className="flex-row gap-3">
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => navigation.navigate(ROUTES.CAMERA as never)}
                 className="flex-1 items-center rounded-lg bg-primary p-4">
                 <Ionicons name="camera-outline" size={24} color="#000000" />

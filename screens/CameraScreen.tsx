@@ -122,7 +122,7 @@ export default function CameraScreen() {
       </View>
 
       {/* Action Buttons */}
-      <View className="px-6 pb-8">
+      <View className="px-6 pb-24">
         <TouchableOpacity className="rounded-lg border border-border bg-secondary p-4">
           <View className="flex-row items-center justify-center">
             <Ionicons name="create-outline" size={20} color="#FFFFFF" />

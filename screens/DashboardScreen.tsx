@@ -66,7 +66,6 @@ export default function DashboardScreen() {
             <CalendarView onDaySelect={handleCalendarDaySelect} />
           </View>
         )}
-
         {/* Monthly Overview Card */}
         {!showCalendarView && (
           <View className="border-border bg-secondary mx-6 mt-6 rounded-lg border p-6">
@@ -78,7 +77,6 @@ export default function DashboardScreen() {
             <Text className="text-muted-foreground mt-1 text-sm">Total spent</Text>
           </View>
         )}
-
         {/* Quick Stats */}
         {!showCalendarView && (
           <View className="mx-6 mt-4 flex-row gap-3">
@@ -100,7 +98,6 @@ export default function DashboardScreen() {
             </View>
           </View>
         )}
-
         {/* Recent Expenses */}
         <View className="mx-6 mt-6">
           <View className="mb-4 flex-row items-center justify-between">
@@ -128,9 +125,8 @@ export default function DashboardScreen() {
           ))}
         </View>
 
-        {/* Quick Actions */}
         {!showCalendarView && (
-          <View className="mx-6 mb-8 mt-6">
+          <View className="mx-6 mt-6">
             <Text className="text-foreground mb-4 text-lg font-semibold">Quick Actions</Text>
             <View className="flex-row gap-3">
               <TouchableOpacity className="bg-primary flex-1 items-center rounded-lg p-4">
@@ -146,6 +142,8 @@ export default function DashboardScreen() {
             </View>
           </View>
         )}
+        {/* Bottom Spacing for Tab Bar */}
+        <View className="h-10" />
       </ScrollView>
 
       <AddExpenseScreen

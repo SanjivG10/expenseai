@@ -180,6 +180,9 @@ export default function AnalyticsScreen() {
             />
           </View>
         </View>
+        
+        {/* Bottom Spacing for Tab Bar */}
+        <View className="h-24" />
       </ScrollView>
     </View>
   );

@@ -258,47 +258,67 @@ export const getAnalyticsDataService = async (
 
   // Calculate date ranges based on period
   let startDate: Date;
-  let endDate: Date = endOfMonth(currentDate);
+  let endDate: Date = currentDate;
+  let periodLabel: string;
 
   switch (period) {
     case 'week':
-      startDate = addDays(currentDate, -7);
+      // Last 7 days including today
+      startDate = addDays(currentDate, -6);
       endDate = currentDate;
+      periodLabel = 'This Week';
       break;
     case 'year':
       startDate = new Date(currentDate.getFullYear(), 0, 1);
+      periodLabel = 'This Year';
       break;
     case 'month':
     default:
       startDate = startOfMonth(currentDate);
+      periodLabel = 'This Month';
   }
 
   // Get current period expenses
   const { data: currentExpenses, error: currentError } = await supabaseAdmin
     .from('expenses')
-    .select('amount, expense_date, category_id, categories(name, icon, color)')
+    .select(
+      `
+      amount,
+      expense_date,
+      category_id,
+      categories!category_id (
+        id,
+        name,
+        icon,
+        color
+      )
+    `
+    )
     .eq('user_id', userId)
     .gte('expense_date', format(startDate, 'yyyy-MM-dd'))
     .lte('expense_date', format(endDate, 'yyyy-MM-dd'));
 
-  console.log('error', JSON.stringify(currentError, null, 2));
-
-  if (currentError) throw new Error('Failed to fetch current period expenses');
+  if (currentError)
+    throw new Error(currentError.message || 'Failed to fetch current period expenses');
 
   // Get previous period for comparison
-  const prevStartDate =
-    period === 'month'
-      ? startOfMonth(subMonths(currentDate, 1))
-      : period === 'week'
-        ? addDays(startDate, -7)
-        : new Date(currentDate.getFullYear() - 1, 0, 1);
+  let prevStartDate: Date;
+  let prevEndDate: Date;
 
-  const prevEndDate =
-    period === 'month'
-      ? endOfMonth(subMonths(currentDate, 1))
-      : period === 'week'
-        ? addDays(endDate, -7)
-        : new Date(currentDate.getFullYear() - 1, 11, 31);
+  switch (period) {
+    case 'week':
+      prevStartDate = addDays(startDate, -7);
+      prevEndDate = addDays(endDate, -7);
+      break;
+    case 'month':
+      prevStartDate = startOfMonth(subMonths(currentDate, 1));
+      prevEndDate = endOfMonth(subMonths(currentDate, 1));
+      break;
+    case 'year':
+      prevStartDate = new Date(currentDate.getFullYear() - 1, 0, 1);
+      prevEndDate = new Date(currentDate.getFullYear() - 1, 11, 31);
+      break;
+  }
 
   const { data: prevExpenses, error: prevError } = await supabaseAdmin
     .from('expenses')
@@ -307,7 +327,7 @@ export const getAnalyticsDataService = async (
     .gte('expense_date', format(prevStartDate, 'yyyy-MM-dd'))
     .lte('expense_date', format(prevEndDate, 'yyyy-MM-dd'));
 
-  if (prevError) throw new Error('Failed to fetch previous period expenses');
+  if (prevError) throw new Error(prevError.message || 'Failed to fetch previous period expenses');
 
   // Calculate totals
   const currentTotal = currentExpenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
@@ -317,46 +337,223 @@ export const getAnalyticsDataService = async (
 
   // Calculate avg daily
   const daysInPeriod =
-    period === 'week' ? 7 : period === 'month' ? endOfMonth(currentDate).getDate() : 365;
+    Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
   const avgDaily = currentTotal / daysInPeriod;
 
   // Get categories
   const { data: categories, error: catError } = await supabaseAdmin
     .from('categories')
-    .select('id, name')
+    .select('id, name, icon, color')
     .eq('user_id', userId);
 
   if (catError) throw new Error('Failed to fetch categories');
 
   // Calculate category breakdown
-  const categoryMap = new Map();
-  categories.forEach((cat) => categoryMap.set(cat.id, cat.name));
-
   const categoryTotals = new Map();
-  currentExpenses.forEach((expense) => {
-    const categoryName = expense.categories[0]?.name || 'Other';
-    const current = categoryTotals.get(categoryName) || 0;
-    categoryTotals.set(categoryName, current + Number(expense.amount));
+  currentExpenses.forEach((expense: any) => {
+    const categoryId = expense.categories?.id || null;
+    const categoryName = expense.categories?.name || 'Other';
+    const key = categoryId;
+    const current = categoryTotals.get(key) || {
+      amount: 0,
+      name: categoryName,
+      id: categoryId,
+      count: 0,
+    };
+    current.amount += Number(expense.amount);
+    current.count += 1;
+    categoryTotals.set(key, current);
   });
 
   const categoryBreakdown: CategoryBreakdown[] = Array.from(categoryTotals.entries())
-    .map(([name, amount]) => {
-      const category = categories.find((c) => c.name === name);
+    .map(([key, data]) => {
+      const category = categories.find((c) => c.id === data.id);
       return {
-        category_id: category?.id || '',
-        category_name: name,
-        category_icon: 'card-outline',
-        category_color: '#FFFFFF',
-        amount: Number(amount),
-        percentage: currentTotal > 0 ? (Number(amount) / currentTotal) * 100 : 0,
-        expense_count: currentExpenses.filter((e) => e.categories[0]?.name === name).length,
+        category_id: data.id || '',
+        category_name: data.name,
+        category_icon: category?.icon || 'card-outline',
+        category_color: category?.color || '#FFFFFF',
+        amount: Number(data.amount),
+        percentage: currentTotal > 0 ? (Number(data.amount) / currentTotal) * 100 : 0,
+        expense_count: data.count,
       };
     })
     .sort((a, b) => b.amount - a.amount);
 
   const topCategory = categoryBreakdown.length > 0 ? categoryBreakdown[0].category_name : 'None';
 
-  return {
+  // Generate spending trends data based on period
+  let spendingTrends: { labels: string[]; data: number[] };
+
+  switch (period) {
+    case 'week':
+      // Daily breakdown for the week
+      const weekLabels = [];
+      const weekData = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = addDays(currentDate, -i);
+        weekLabels.push(format(date, 'EEE'));
+
+        const dayExpenses = currentExpenses.filter(
+          (exp) => exp.expense_date === format(date, 'yyyy-MM-dd')
+        );
+        const dayTotal = dayExpenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
+        weekData.push(dayTotal);
+      }
+      spendingTrends = { labels: weekLabels, data: weekData };
+      break;
+
+    case 'month':
+      // Weekly breakdown for the month
+      const monthLabels = [];
+      const monthData = [];
+      const weeksInMonth = Math.ceil(endOfMonth(currentDate).getDate() / 7);
+
+      for (let week = 1; week <= weeksInMonth; week++) {
+        monthLabels.push(`Week ${week}`);
+
+        const weekStart = addDays(startOfMonth(currentDate), (week - 1) * 7);
+        const weekEnd = week === weeksInMonth ? endOfMonth(currentDate) : addDays(weekStart, 6);
+
+        const weekExpenses = currentExpenses.filter((exp) => {
+          const expDate = new Date(exp.expense_date);
+          return expDate >= weekStart && expDate <= weekEnd;
+        });
+
+        const weekTotal = weekExpenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
+        monthData.push(weekTotal);
+      }
+      spendingTrends = { labels: monthLabels, data: monthData };
+      break;
+
+    case 'year':
+      // Monthly breakdown for the year
+      const yearLabels = [];
+      const yearData = [];
+
+      for (let month = 0; month < 12; month++) {
+        const monthDate = new Date(currentDate.getFullYear(), month, 1);
+        yearLabels.push(format(monthDate, 'MMM'));
+
+        const monthStart = startOfMonth(monthDate);
+        const monthEnd = endOfMonth(monthDate);
+
+        const monthExpenses = currentExpenses.filter((exp) => {
+          const expDate = new Date(exp.expense_date);
+          return expDate >= monthStart && expDate <= monthEnd;
+        });
+
+        const monthTotal = monthExpenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
+        yearData.push(monthTotal);
+      }
+      spendingTrends = { labels: yearLabels, data: yearData };
+      break;
+  }
+
+  // Generate comparison data based on period
+  let comparisonData: { labels: string[]; data: number[] };
+
+  switch (period) {
+    case 'week':
+      // Compare with previous 4 weeks
+      const compWeekLabels = [];
+      const compWeekData = [];
+
+      for (let i = 3; i >= 0; i--) {
+        const weekStart = addDays(currentDate, -(i * 7 + 6));
+        const weekEnd = addDays(currentDate, -(i * 7));
+
+        // Use day names for weekly comparison
+        compWeekLabels.push(format(weekStart, 'EEE'));
+
+        // Get expenses for this week
+        const { data: weekExpenses, error: weekError } = await supabaseAdmin
+          .from('expenses')
+          .select('amount')
+          .eq('user_id', userId)
+          .gte('expense_date', format(weekStart, 'yyyy-MM-dd'))
+          .lte('expense_date', format(weekEnd, 'yyyy-MM-dd'));
+
+        if (weekError) {
+          console.error('Error fetching week data:', weekError);
+          compWeekData.push(0);
+        } else {
+          const weekTotal = weekExpenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
+          compWeekData.push(weekTotal);
+        }
+      }
+
+      comparisonData = { labels: compWeekLabels, data: compWeekData };
+      break;
+
+    case 'month':
+      // Compare with previous 6 months
+      const compMonthLabels = [];
+      const compMonthData = [];
+
+      for (let i = 5; i >= 0; i--) {
+        const monthDate = subMonths(currentDate, i);
+        const monthStart = startOfMonth(monthDate);
+        const monthEnd = endOfMonth(monthDate);
+
+        // Use short month names for monthly comparison
+        compMonthLabels.push(format(monthDate, 'MMM'));
+
+        // Get expenses for this month
+        const { data: monthExpenses, error: monthError } = await supabaseAdmin
+          .from('expenses')
+          .select('amount')
+          .eq('user_id', userId)
+          .gte('expense_date', format(monthStart, 'yyyy-MM-dd'))
+          .lte('expense_date', format(monthEnd, 'yyyy-MM-dd'));
+
+        if (monthError) {
+          console.error('Error fetching month data:', monthError);
+          compMonthData.push(0);
+        } else {
+          const monthTotal = monthExpenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
+          compMonthData.push(monthTotal);
+        }
+      }
+
+      comparisonData = { labels: compMonthLabels, data: compMonthData };
+      break;
+
+    case 'year':
+      // Compare with previous 3 years
+      const compYearLabels = [];
+      const compYearData = [];
+
+      for (let i = 2; i >= 0; i--) {
+        const yearDate = new Date(currentDate.getFullYear() - i, 0, 1);
+        const yearStart = new Date(yearDate.getFullYear(), 0, 1);
+        const yearEnd = new Date(yearDate.getFullYear(), 11, 31);
+
+        // Use year for yearly comparison
+        compYearLabels.push(yearDate.getFullYear().toString());
+
+        // Get expenses for this year
+        const { data: yearExpenses, error: yearError } = await supabaseAdmin
+          .from('expenses')
+          .select('amount')
+          .eq('user_id', userId)
+          .gte('expense_date', format(yearStart, 'yyyy-MM-dd'))
+          .lte('expense_date', format(yearEnd, 'yyyy-MM-dd'));
+
+        if (yearError) {
+          console.error('Error fetching year data:', yearError);
+          compYearData.push(0);
+        } else {
+          const yearTotal = yearExpenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
+          compYearData.push(yearTotal);
+        }
+      }
+
+      comparisonData = { labels: compYearLabels, data: compYearData };
+      break;
+  }
+
+  const result = {
     period,
     summary: {
       this_month: { total: currentTotal, change: changeStr },
@@ -365,16 +562,12 @@ export const getAnalyticsDataService = async (
       total_transactions: currentExpenses.length,
       top_category: topCategory,
     },
-    spending_trends: {
-      labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-      data: [120, 180, 95, 230], // Placeholder - would need more complex calculation
-    },
+    spending_trends: spendingTrends,
     category_breakdown: categoryBreakdown,
-    monthly_comparison: {
-      labels: ['Dec', 'Jan', 'Feb', 'Mar', 'Apr'],
-      data: [450, 380, 520, 310, 480], // Placeholder - would need historical data
-    },
+    monthly_comparison: comparisonData,
   };
+
+  return result;
 };
 
 // Get settings data

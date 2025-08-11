@@ -1,27 +1,24 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, API_ENDPOINTS, buildApiUrl } from '../constants/api';
 import {
-  AnalyticsScreenQuery,
-  AnalyticsScreenResponse,
   ApiError,
   ApiResponse,
   Category,
   CreateCategoryRequest,
   CreateExpenseRequest,
+  DashboardScreenData,
   DashboardScreenQuery,
-  DashboardScreenResponse,
   Expense,
-  ExpensesScreenQuery,
-  ExpensesScreenResponse,
   ExpensesScreenData,
+  ExpensesScreenQuery,
   GetCategories,
   ProcessReceiptRequest,
   ProcessReceiptResponse,
   UpdateCategoryRequest,
   UpdateExpenseRequest,
   UpdateProfileRequest,
-  DashboardScreenData,
 } from '../types';
+import { AnalyticsData, AnalyticsScreenQuery, AnalyticsScreenResponse } from '../types/analytics';
 
 const url = buildApiUrl(API_ENDPOINTS.AUTH_SIGNUP);
 console.log({ url, baseURL: API_CONFIG.BASE_URL });
@@ -54,11 +51,13 @@ class ApiService {
 
     if (includeAuth) {
       const token = await this.getAccessToken();
+      console.log('Auth token:', token ? 'present' : 'missing');
       if (token) {
         headers.Authorization = `Bearer ${token}`;
       }
     }
 
+    console.log('Built headers:', headers);
     return headers;
   }
 
@@ -84,6 +83,7 @@ class ApiService {
 
     try {
       console.log('request', url);
+      console.log('request config:', config);
       const response = await fetch(url, {
         ...config,
         signal: controller.signal,
@@ -91,7 +91,11 @@ class ApiService {
 
       clearTimeout(timeoutId);
 
+      console.log('response status:', response.status);
+      console.log('response ok:', response.ok);
+
       const responseData = await response.json();
+      console.log('response data:', responseData);
 
       if (!response.ok) {
         const error: ApiError = responseData;
@@ -169,13 +173,13 @@ class ApiService {
     return this.get(endpoint, true);
   }
 
-  async getAnalyticsData(
-    query?: AnalyticsScreenQuery
-  ): Promise<ApiResponse<AnalyticsScreenResponse>> {
+  async getAnalyticsData(query?: AnalyticsScreenQuery): Promise<AnalyticsScreenResponse> {
     const queryString = query ? new URLSearchParams(query as any).toString() : '';
     const endpoint = queryString
       ? `${API_ENDPOINTS.SCREEN_ANALYTICS}?${queryString}`
       : API_ENDPOINTS.SCREEN_ANALYTICS;
+    console.log('Analytics endpoint:', endpoint);
+    console.log('Full URL:', buildApiUrl(endpoint));
     return this.get(endpoint, true);
   }
 
@@ -202,7 +206,9 @@ class ApiService {
     return this.delete(endpoint, true);
   }
 
-  async uploadReceiptImage(imageData: string): Promise<ApiResponse<{ image_url: string; file_name: string }>> {
+  async uploadReceiptImage(
+    imageData: string
+  ): Promise<ApiResponse<{ image_url: string; file_name: string }>> {
     return this.post(API_ENDPOINTS.EXPENSE_UPLOAD_RECEIPT, { image: imageData }, true);
   }
 

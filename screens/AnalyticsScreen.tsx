@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Dimensions, RefreshControl, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Dimensions, RefreshControl, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
 import { apiService } from '../services/api';
 import { AnalyticsResponse, AnalyticsQuery } from '../types/api';
+import LoadingScreen from '../components/LoadingScreen';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -74,28 +75,28 @@ export default function AnalyticsScreen() {
 
   // Transform API data for charts
   const spendingTrendData = analyticsData ? {
-    labels: analyticsData.spendingTrends.labels,
+    labels: analyticsData.spending_trends.labels,
     datasets: [
       {
-        data: analyticsData.spendingTrends.data,
+        data: analyticsData.spending_trends.data,
       },
     ],
   } : { labels: [], datasets: [{ data: [] }] };
 
   const monthlyComparisonData = analyticsData ? {
-    labels: analyticsData.monthlyComparison.labels,
+    labels: analyticsData.monthly_comparison.labels,
     datasets: [
       {
-        data: analyticsData.monthlyComparison.data,
+        data: analyticsData.monthly_comparison.data,
       },
     ],
   } : { labels: [], datasets: [{ data: [] }] };
 
-  const categoryBreakdown = analyticsData ? analyticsData.categoryBreakdown.map(category => ({
-    name: category.name,
+  const categoryBreakdown = analyticsData ? analyticsData.category_breakdown.map(category => ({
+    name: category.category_name,
     amount: category.amount,
-    color: category.color,
-    legendFontColor: category.color,
+    color: category.category_color,
+    legendFontColor: category.category_color,
   })) : [];
 
   const totalSpent = categoryBreakdown.reduce((sum, item) => sum + item.amount, 0);
@@ -103,25 +104,25 @@ export default function AnalyticsScreen() {
   const stats = analyticsData ? [
     { 
       label: 'This Month', 
-      value: `$${analyticsData.summary.thisMonth.total.toFixed(2)}`, 
-      change: analyticsData.summary.thisMonth.change, 
+      value: `$${analyticsData.summary.this_month.total.toFixed(2)}`, 
+      change: analyticsData.summary.this_month.change, 
       icon: 'trending-up' 
     },
     { 
       label: 'Average Daily', 
-      value: `$${analyticsData.summary.avgDaily.amount.toFixed(2)}`, 
-      change: analyticsData.summary.avgDaily.change, 
+      value: `$${analyticsData.summary.avg_daily.amount.toFixed(2)}`, 
+      change: analyticsData.summary.avg_daily.change, 
       icon: 'calendar' 
     },
     { 
       label: 'Categories', 
-      value: analyticsData.summary.totalCategories.toString(), 
+      value: analyticsData.summary.total_categories.toString(), 
       change: '0%', 
       icon: 'list' 
     },
     { 
       label: 'Transactions', 
-      value: analyticsData.summary.totalTransactions.toString(), 
+      value: analyticsData.summary.total_transactions.toString(), 
       change: '+8%', 
       icon: 'receipt' 
     },
@@ -129,13 +130,7 @@ export default function AnalyticsScreen() {
 
   // Loading state
   if (isLoading && !analyticsData) {
-    return (
-      <View className="flex-1 bg-background items-center justify-center">
-        <StatusBar style="light" backgroundColor="#000000" />
-        <ActivityIndicator size="large" color="#FFFFFF" />
-        <Text className="mt-4 text-lg text-muted-foreground">Loading analytics...</Text>
-      </View>
-    );
+    return <LoadingScreen message="Loading your analytics..." />;
   }
 
   return (

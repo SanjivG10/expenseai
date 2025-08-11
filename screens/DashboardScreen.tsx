@@ -7,8 +7,9 @@ import AddExpenseScreen from './AddExpenseScreen';
 import CalendarView from '../components/CalendarView';
 import { format } from 'date-fns';
 import { apiService } from '../services/api';
-import { DashboardResponse, Expense } from '../types/api';
+import { DashboardResponse, RecentExpense } from '../types/api';
 import { ROUTES } from '../constants/urls';
+import LoadingScreen from '../components/LoadingScreen';
 
 export default function DashboardScreen() {
   const [showAddExpense, setShowAddExpense] = useState(false);
@@ -67,13 +68,7 @@ export default function DashboardScreen() {
 
   // Loading state
   if (isLoading && !dashboardData) {
-    return (
-      <View className="flex-1 items-center justify-center bg-background">
-        <StatusBar style="light" backgroundColor="#000000" />
-        <Ionicons name="refresh-outline" size={48} color="#404040" />
-        <Text className="mt-4 text-lg text-muted-foreground">Loading dashboard...</Text>
-      </View>
-    );
+    return <LoadingScreen message="Loading your dashboard..." />;
   }
 
   return (
@@ -124,7 +119,7 @@ export default function DashboardScreen() {
               <Ionicons name="trending-up-outline" size={24} color="#FFFFFF" />
             </View>
             <Text className="text-3xl font-bold text-foreground">
-              ${dashboardData.monthlyStats.total.toFixed(2)}
+              ${dashboardData.monthly_stats.total.toFixed(2)}
             </Text>
             <Text className="mt-1 text-sm text-muted-foreground">Total spent</Text>
           </View>
@@ -135,19 +130,19 @@ export default function DashboardScreen() {
             <View className="flex-1 rounded-lg border border-border bg-secondary p-4">
               <Text className="text-sm text-muted-foreground">Categories</Text>
               <Text className="mt-1 text-xl font-bold text-foreground">
-                {dashboardData.monthlyStats.categoriesCount}
+                {dashboardData.monthly_stats.categories_count}
               </Text>
             </View>
             <View className="flex-1 rounded-lg border border-border bg-secondary p-4">
               <Text className="text-sm text-muted-foreground">Transactions</Text>
               <Text className="mt-1 text-xl font-bold text-foreground">
-                {dashboardData.monthlyStats.expenseCount}
+                {dashboardData.monthly_stats.expense_count}
               </Text>
             </View>
             <View className="flex-1 rounded-lg border border-border bg-secondary p-4">
               <Text className="text-sm text-muted-foreground">Avg/Day</Text>
               <Text className="mt-1 text-xl font-bold text-foreground">
-                ${dashboardData.monthlyStats.avgDaily.toFixed(0)}
+                ${dashboardData.monthly_stats.avg_daily.toFixed(0)}
               </Text>
             </View>
           </View>
@@ -161,8 +156,8 @@ export default function DashboardScreen() {
             </TouchableOpacity>
           </View>
 
-          {dashboardData && dashboardData.recentExpenses.length > 0 ? (
-            dashboardData.recentExpenses.map((expense) => (
+          {dashboardData && dashboardData.recent_expenses.length > 0 ? (
+            dashboardData.recent_expenses.map((expense) => (
               <TouchableOpacity
                 key={expense.id}
                 className="mb-3 flex-row items-center rounded-lg border border-border bg-secondary p-4">
@@ -172,7 +167,7 @@ export default function DashboardScreen() {
                 <View className="flex-1">
                   <Text className="font-medium text-foreground">{expense.description}</Text>
                   <Text className="text-sm text-muted-foreground">
-                    {expense.categoryName} • {expense.date}
+                    {expense.category_name} • {expense.date}
                   </Text>
                 </View>
                 <Text className="font-bold text-foreground">${expense.amount.toFixed(2)}</Text>

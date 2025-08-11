@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { InlineLoader } from '../components/LoadingScreen';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -135,9 +136,11 @@ export default function CameraScreen() {
           {/* Processing Overlay */}
           {isProcessing && (
             <View className="absolute inset-0 bg-black/70 items-center justify-center">
-              <ActivityIndicator size="large" color="#FFFFFF" />
-              <Text className="mt-4 text-lg text-white font-medium">Processing Receipt...</Text>
-              <Text className="mt-1 text-sm text-white/70">Extracting expense data</Text>
+              <View className="bg-black/60 rounded-xl p-6 items-center">
+                <InlineLoader size="large" message="" showDots={false} />
+                <Text className="mt-4 text-lg text-white font-medium">Processing Receipt...</Text>
+                <Text className="mt-1 text-sm text-white/70">Extracting expense data with AI</Text>
+              </View>
             </View>
           )}
           

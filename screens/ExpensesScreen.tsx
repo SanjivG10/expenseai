@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import AddExpenseScreen from './AddExpenseScreen';
 import { apiService } from '../services/api';
-import { ExpensesResponse, Expense, Category, ExpensesQuery } from '../types/api';
+import { ExpensesResponse, ExpenseWithCategory, Category, ExpensesQuery } from '../types/api';
+import LoadingScreen, { InlineLoader } from '../components/LoadingScreen';
 
 export default function ExpensesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'category'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
-  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [editingExpense, setEditingExpense] = useState<ExpenseWithCategory | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   
   // API state
@@ -42,8 +43,8 @@ export default function ExpensesScreen() {
         limit: 20,
         search: searchQuery || undefined,
         category: filterCategory || undefined,
-        sortBy,
-        sortOrder,
+        sort_by: sortBy,
+        sort_order: sortOrder,
       };
 
       const response = await apiService.getExpensesData(query);
@@ -95,12 +96,12 @@ export default function ExpensesScreen() {
     return category?.name || categoryId;
   };
 
-  const handleEditExpense = (expense: Expense) => {
+  const handleEditExpense = (expense: ExpenseWithCategory) => {
     setEditingExpense(expense);
     setShowEditModal(true);
   };
 
-  const handleDeleteExpense = async (expense: Expense) => {
+  const handleDeleteExpense = async (expense: ExpenseWithCategory) => {
     Alert.alert(
       'Delete Expense',
       `Are you sure you want to delete "${expense.description}"?`,
@@ -130,8 +131,8 @@ export default function ExpensesScreen() {
         await apiService.updateExpense(editingExpense.id, {
           amount: updatedExpense.amount,
           description: updatedExpense.description,
-          category: updatedExpense.category,
-          date: updatedExpense.date,
+          category_id: updatedExpense.category_id,
+          expense_date: updatedExpense.expense_date,
           notes: updatedExpense.notes,
         });
         fetchExpensesData(true); // Refresh the list
@@ -146,7 +147,7 @@ export default function ExpensesScreen() {
   };
 
   const handleLoadMore = () => {
-    if (expensesData?.pagination.hasMore && !isLoadingMore) {
+    if (expensesData?.pagination.has_more && !isLoadingMore) {
       fetchExpensesData(false, currentPage + 1);
     }
   };
@@ -157,13 +158,7 @@ export default function ExpensesScreen() {
 
   // Loading state
   if (isLoading && !expensesData) {
-    return (
-      <View className="flex-1 bg-background items-center justify-center">
-        <StatusBar style="light" backgroundColor="#000000" />
-        <ActivityIndicator size="large" color="#FFFFFF" />
-        <Text className="mt-4 text-lg text-muted-foreground">Loading expenses...</Text>
-      </View>
-    );
+    return <LoadingScreen message="Loading your expenses..." />;
   }
 
   return (
@@ -174,7 +169,7 @@ export default function ExpensesScreen() {
       <View className="border-border border-b px-6 pb-4 pt-14">
         <Text className="text-foreground text-2xl font-bold">Expenses</Text>
         <Text className="text-muted-foreground mt-1 text-sm">
-          {expensesData?.summary.totalExpenses || 0} transactions
+          {expensesData?.summary.total_expenses || 0} transactions
         </Text>
       </View>
 
@@ -279,12 +274,12 @@ export default function ExpensesScreen() {
             className="border-border bg-secondary mb-3 rounded-lg border overflow-hidden">
             <View className="flex-row items-center p-4">
               <View className="bg-accent mr-4 h-12 w-12 items-center justify-center rounded-full">
-                <Ionicons name={getCategoryIcon(expense.category) as any} size={24} color="#FFFFFF" />
+                <Ionicons name={(expense.category_icon || 'receipt-outline') as any} size={24} color="#FFFFFF" />
               </View>
               <View className="flex-1">
                 <Text className="text-foreground font-semibold">{expense.description}</Text>
                 <Text className="text-muted-foreground mt-1 text-sm">
-                  {getCategoryName(expense.category)} • {expense.date}
+                  {expense.category_name || 'Uncategorized'} • {expense.expense_date}
                 </Text>
               </View>
               <View className="items-end">
@@ -324,10 +319,7 @@ export default function ExpensesScreen() {
 
         {/* Load More Indicator */}
         {isLoadingMore && (
-          <View className="items-center py-4">
-            <ActivityIndicator size="small" color="#FFFFFF" />
-            <Text className="text-muted-foreground mt-2 text-sm">Loading more expenses...</Text>
-          </View>
+          <InlineLoader size="small" message="Loading more expenses..." showDots={false} />
         )}
 
         {/* Bottom Spacing for Tab Bar */}

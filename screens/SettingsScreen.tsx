@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch, Linking, Platform, Alert, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Switch, Linking, Platform, Alert, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import * as StoreReview from 'expo-store-review';
@@ -9,6 +9,7 @@ import CategoriesScreen from './CategoriesScreen';
 import FAQScreen from './FAQScreen';
 import { apiService } from '../services/api';
 import { SettingsResponse } from '../types/api';
+import LoadingScreen from '../components/LoadingScreen';
 
 export default function SettingsScreen() {
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -75,7 +76,7 @@ export default function SettingsScreen() {
   };
 
   // Use data from API or fallback to auth context
-  const currentUser = settingsData?.userProfile || user || {
+  const currentUser = settingsData?.user_profile || user || {
     id: '',
     firstName: 'Guest',
     lastName: 'User',
@@ -83,7 +84,7 @@ export default function SettingsScreen() {
     memberSince: new Date().toISOString(),
   };
 
-  const notificationsEnabled = settingsData?.preferences?.notifications ?? true;
+  const notificationsEnabled = settingsData?.preferences?.theme === 'dark' ?? true; // Adjust this based on actual preferences structure
 
   const handleContactSupport = () => {
     Linking.openURL('mailto:sanjiv@upgiant.com?subject=ExpenseAI Support');
@@ -192,13 +193,7 @@ export default function SettingsScreen() {
 
   // Loading state
   if (isLoading && !settingsData) {
-    return (
-      <View className="flex-1 bg-background items-center justify-center">
-        <StatusBar style="light" backgroundColor="#000000" />
-        <ActivityIndicator size="large" color="#FFFFFF" />
-        <Text className="mt-4 text-lg text-muted-foreground">Loading settings...</Text>
-      </View>
-    );
+    return <LoadingScreen message="Loading your settings..." />;
   }
 
   return (

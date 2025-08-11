@@ -10,11 +10,13 @@ import {
   ScrollView,
   Switch,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import LoadingScreen from '../components/LoadingScreen';
+import LoadingScreen, { InlineLoader } from '../components/LoadingScreen';
 import { useAuth } from '../contexts/AuthContext';
+import { useOnboarding } from '../contexts/OnboardingContext';
 import { apiService } from '../services/api';
 import CategoriesScreen from './CategoriesScreen';
 import FAQScreen from './FAQScreen';
@@ -22,19 +24,29 @@ import ProfileScreen from './ProfileScreen';
 import Toast from 'react-native-toast-message';
 
 // Storage key for notification preference
-const NOTIFICATION_PREFERENCE_KEY = '@expense_ai_notification_preference';
+export const NOTIFICATION_PREFERENCE_KEY = '@expense_ai_notification_preference';
 
 export default function SettingsScreen() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showCategoriesModal, setShowCategoriesModal] = useState(false);
   const [showFAQModal, setShowFAQModal] = useState(false);
+  const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const { user, logout, setUser } = useAuth();
+  const [budgetLoading, setBudgetLoading] = useState(false);
 
-  // Load notification preference from storage
+  // Budget state
+  const [dailyBudget, setDailyBudget] = useState('');
+  const [weeklyBudget, setWeeklyBudget] = useState('');
+  const [monthlyBudget, setMonthlyBudget] = useState('');
+
+  const { user, logout, setUser } = useAuth();
+  const { resetOnboarding } = useOnboarding();
+
+  // Load notification preference and user preferences from storage/API
   useEffect(() => {
     loadNotificationPreference();
+    loadUserPreferences();
   }, []);
 
   const loadNotificationPreference = async () => {
@@ -47,6 +59,20 @@ export default function SettingsScreen() {
       setNotificationsEnabled(false);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadUserPreferences = async () => {
+    try {
+      const response = await apiService.getUserPreferences();
+      if (response.success && response.data) {
+        const { daily_budget, weekly_budget, monthly_budget } = response.data;
+        setDailyBudget(daily_budget ? daily_budget.toString() : '');
+        setWeeklyBudget(weekly_budget ? weekly_budget.toString() : '');
+        setMonthlyBudget(monthly_budget ? monthly_budget.toString() : '');
+      }
+    } catch (error) {
+      console.error('Failed to load user preferences:', error);
     }
   };
 
@@ -87,6 +113,41 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleBudgetSave = async () => {
+    try {
+      setBudgetLoading(true);
+
+      const updateData = {
+        daily_budget: dailyBudget ? parseFloat(dailyBudget) : undefined,
+        weekly_budget: weeklyBudget ? parseFloat(weeklyBudget) : undefined,
+        monthly_budget: monthlyBudget ? parseFloat(monthlyBudget) : undefined,
+      };
+
+      const response = await apiService.updateUserPreferences(updateData);
+
+      if (response.success) {
+        setShowBudgetModal(false);
+        Toast.show({
+          text1: 'Budget settings updated successfully',
+          type: 'success',
+        });
+      } else {
+        Toast.show({
+          text1: response.message || 'Failed to update budget settings',
+          type: 'error',
+        });
+      }
+    } catch (error) {
+      console.error('Budget update error:', error);
+      Toast.show({
+        text1: 'Failed to update budget settings',
+        type: 'error',
+      });
+    } finally {
+      setBudgetLoading(false);
+    }
+  };
+
   const handleContactSupport = () => {
     Linking.openURL('mailto:sanjiv@upgiant.com?subject=ExpenseAI Support');
   };
@@ -120,6 +181,79 @@ export default function SettingsScreen() {
     ]);
   };
 
+  // Notification testing handlers
+  const testDailyNotification = async () => {
+    try {
+      const response = await apiService.testDailyNotification();
+      if (response.success) {
+        Alert.alert(
+          '🌙 Daily Reminder (Test)',
+          '💰 You have $25.50 remaining in your daily budget of $50.00. Sleep well!'
+        );
+      } else {
+        Alert.alert('Error', 'Failed to trigger daily notification test');
+      }
+    } catch (error) {
+      console.error('Daily notification test error:', error);
+      Alert.alert('Error', 'Failed to test daily notification');
+    }
+  };
+
+  const testWeeklyNotification = async () => {
+    try {
+      const response = await apiService.testWeeklyNotification();
+      if (response.success) {
+        Alert.alert(
+          '📊 Weekly Summary (Test)',
+          "🔶 Weekly spending: $180.75 of $300.00 (60%). You're doing great this week!"
+        );
+      } else {
+        Alert.alert('Error', 'Failed to trigger weekly notification test');
+      }
+    } catch (error) {
+      console.error('Weekly notification test error:', error);
+      Alert.alert('Error', 'Failed to test weekly notification');
+    }
+  };
+
+  const testMonthlyNotification = async () => {
+    try {
+      const response = await apiService.testMonthlyNotification();
+      if (response.success) {
+        Alert.alert(
+          '📈 Monthly Summary (Test)',
+          '💰 Monthly budget remaining: $450.25 of $1,500.00. Keep up the good work!'
+        );
+      } else {
+        Alert.alert('Error', 'Failed to trigger monthly notification test');
+      }
+    } catch (error) {
+      console.error('Monthly notification test error:', error);
+      Alert.alert('Error', 'Failed to test monthly notification');
+    }
+  };
+
+  const resetOnboardingFlow = () => {
+    Alert.alert(
+      'Reset Onboarding',
+      'This will reset the onboarding flow and you will see it again on next app restart. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            await resetOnboarding();
+            Alert.alert(
+              'Success',
+              'Onboarding has been reset. You will see the onboarding screen on next app restart.'
+            );
+          },
+        },
+      ]
+    );
+  };
+
   const settingsSections = [
     {
       title: 'Account',
@@ -140,6 +274,12 @@ export default function SettingsScreen() {
           title: 'Categories',
           subtitle: 'Manage expense categories',
           onPress: () => setShowCategoriesModal(true),
+        },
+        {
+          icon: 'wallet-outline',
+          title: 'Budget Settings',
+          subtitle: 'Set daily, weekly & monthly spending limits',
+          onPress: () => setShowBudgetModal(true),
         },
         {
           icon: 'notifications-outline',
@@ -182,6 +322,36 @@ export default function SettingsScreen() {
           title: 'Sign Out',
           subtitle: 'Sign out of your account',
           onPress: handleLogout,
+          isDestructive: true,
+        },
+      ],
+    },
+    {
+      title: 'Developer Testing (Remove Later)',
+      items: [
+        {
+          icon: 'moon-outline',
+          title: 'Test Daily Notification',
+          subtitle: 'Trigger a sample daily reminder',
+          onPress: testDailyNotification,
+        },
+        {
+          icon: 'calendar-outline',
+          title: 'Test Weekly Notification',
+          subtitle: 'Trigger a sample weekly summary',
+          onPress: testWeeklyNotification,
+        },
+        {
+          icon: 'trending-up-outline',
+          title: 'Test Monthly Notification',
+          subtitle: 'Trigger a sample monthly summary',
+          onPress: testMonthlyNotification,
+        },
+        {
+          icon: 'refresh-outline',
+          title: 'Reset Onboarding',
+          subtitle: 'Reset onboarding flow for testing',
+          onPress: resetOnboardingFlow,
           isDestructive: true,
         },
       ],
@@ -317,6 +487,103 @@ export default function SettingsScreen() {
       />
 
       <FAQScreen visible={showFAQModal} onClose={() => setShowFAQModal(false)} />
+
+      {/* Budget Settings Modal */}
+      {showBudgetModal && (
+        <View className="absolute inset-0 flex-1 justify-end bg-black/50">
+          <View className="max-h-96 rounded-t-xl border-t border-border bg-background p-6">
+            <View className="mb-4 flex-row items-center justify-between">
+              <Text className="text-lg font-semibold text-foreground">Budget Settings</Text>
+              <TouchableOpacity onPress={() => setShowBudgetModal(false)}>
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Daily Budget */}
+              <View className="mb-4">
+                <Text className="mb-2 text-sm font-medium text-foreground">Daily Budget (USD)</Text>
+                <View className="flex-row items-center rounded-lg border border-border bg-input">
+                  <Text className="px-4 py-3 text-lg text-foreground">$</Text>
+                  <TextInput
+                    value={dailyBudget}
+                    onChangeText={setDailyBudget}
+                    placeholder="50"
+                    placeholderTextColor="#a3a3a3"
+                    keyboardType="numeric"
+                    className="flex-1 px-2 py-3 text-lg text-foreground"
+                  />
+                </View>
+              </View>
+
+              {/* Weekly Budget */}
+              <View className="mb-4">
+                <Text className="mb-2 text-sm font-medium text-foreground">
+                  Weekly Budget (USD)
+                </Text>
+                <View className="flex-row items-center rounded-lg border border-border bg-input">
+                  <Text className="px-4 py-3 text-lg text-foreground">$</Text>
+                  <TextInput
+                    value={weeklyBudget}
+                    onChangeText={setWeeklyBudget}
+                    placeholder="350"
+                    placeholderTextColor="#a3a3a3"
+                    keyboardType="numeric"
+                    className="flex-1 px-2 py-3 text-lg text-foreground"
+                  />
+                </View>
+              </View>
+
+              {/* Monthly Budget */}
+              <View className="mb-6">
+                <Text className="mb-2 text-sm font-medium text-foreground">
+                  Monthly Budget (USD)
+                </Text>
+                <View className="flex-row items-center rounded-lg border border-border bg-input">
+                  <Text className="px-4 py-3 text-lg text-foreground">$</Text>
+                  <TextInput
+                    value={monthlyBudget}
+                    onChangeText={setMonthlyBudget}
+                    placeholder="1500"
+                    placeholderTextColor="#a3a3a3"
+                    keyboardType="numeric"
+                    className="flex-1 px-2 py-3 text-lg text-foreground"
+                  />
+                </View>
+              </View>
+
+              <View className="mb-4 rounded-lg bg-secondary p-4">
+                <Text className="text-sm text-muted-foreground">
+                  💡 <Text className="font-medium">Tip:</Text> Leave fields empty to disable budget
+                  limits. You&apos;ll receive notifications when you reach 80% and 100% of your
+                  budget.
+                </Text>
+              </View>
+            </ScrollView>
+
+            {/* Action Buttons */}
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                onPress={() => setShowBudgetModal(false)}
+                className="flex-1 rounded-lg border border-border p-4">
+                <Text className="text-center font-semibold text-foreground">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleBudgetSave}
+                disabled={budgetLoading}
+                className={`flex-1 rounded-lg p-4 ${budgetLoading ? 'bg-muted' : 'bg-primary'}`}>
+                {budgetLoading ? (
+                  <InlineLoader message="Saving..." showDots={false} />
+                ) : (
+                  <Text className="text-center font-semibold text-primary-foreground">
+                    Save Changes
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }

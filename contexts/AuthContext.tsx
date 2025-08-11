@@ -4,6 +4,7 @@ import { createContext, ReactNode, useContext, useEffect, useState } from 'react
 import Toast from 'react-native-toast-message';
 import { API_ENDPOINTS } from '../constants/api';
 import { apiService } from '../services/api';
+import { NOTIFICATION_PREFERENCE_KEY } from 'screens/SettingsScreen';
 
 export interface User {
   id: string;
@@ -210,6 +211,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
         AsyncStorage.removeItem(STORAGE_KEYS.USER),
         AsyncStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN),
+        AsyncStorage.removeItem(NOTIFICATION_PREFERENCE_KEY),
       ]);
 
       setAuthState({

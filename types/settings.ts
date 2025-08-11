@@ -2,8 +2,8 @@
 
 import { CategoryWithStats } from './categories';
 
-// User preferences structure (matches database schema)
-export interface UserPreferences {
+// User settings structure (legacy - use preferences.ts instead)
+export interface UserSettings {
   user_id: string;
   default_category_id?: string;
   budget_monthly?: number;

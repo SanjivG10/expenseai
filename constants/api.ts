@@ -32,6 +32,15 @@ export const API_ENDPOINTS = {
   CATEGORY_BY_ID: '/categories/:id',
   USERS_PROFILE: '/users/profile',
 
+  // Preferences and onboarding
+  ONBOARDING_COMPLETE: '/preferences/onboarding/complete',
+  PREFERENCES: '/preferences',
+
+  // Notification testing
+  NOTIFICATIONS_TEST_DAILY: '/notifications/test-daily',
+  NOTIFICATIONS_TEST_WEEKLY: '/notifications/test-weekly',
+  NOTIFICATIONS_TEST_MONTHLY: '/notifications/test-monthly',
+
   // Health check
   HEALTH: '/health',
   AUTH_HEALTH: '/auth/health',

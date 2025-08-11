@@ -12,11 +12,14 @@ import {
   ExpensesScreenData,
   ExpensesScreenQuery,
   GetCategories,
+  OnboardingRequest,
   ProcessReceiptRequest,
   ProcessReceiptResponse,
   UpdateCategoryRequest,
   UpdateExpenseRequest,
+  UpdatePreferencesRequest,
   UpdateProfileRequest,
+  UserPreferences,
 } from '../types';
 import { AnalyticsData, AnalyticsScreenQuery, AnalyticsScreenResponse } from '../types/analytics';
 
@@ -228,6 +231,32 @@ class ApiService {
   // User profile operations
   async updateProfile(data: UpdateProfileRequest): Promise<ApiResponse<any>> {
     return this.put(API_ENDPOINTS.AUTH_PROFILE, data, true);
+  }
+
+  // Onboarding and preferences operations
+  async completeOnboarding(data: OnboardingRequest): Promise<ApiResponse<UserPreferences>> {
+    return this.post(API_ENDPOINTS.ONBOARDING_COMPLETE, data, true);
+  }
+
+  async getUserPreferences(): Promise<ApiResponse<UserPreferences>> {
+    return this.get(API_ENDPOINTS.PREFERENCES, true);
+  }
+
+  async updateUserPreferences(data: UpdatePreferencesRequest): Promise<ApiResponse<UserPreferences>> {
+    return this.put(API_ENDPOINTS.PREFERENCES, data, true);
+  }
+
+  // Notification testing methods
+  async testDailyNotification(): Promise<ApiResponse<any>> {
+    return this.post(API_ENDPOINTS.NOTIFICATIONS_TEST_DAILY, {}, true);
+  }
+
+  async testWeeklyNotification(): Promise<ApiResponse<any>> {
+    return this.post(API_ENDPOINTS.NOTIFICATIONS_TEST_WEEKLY, {}, true);
+  }
+
+  async testMonthlyNotification(): Promise<ApiResponse<any>> {
+    return this.post(API_ENDPOINTS.NOTIFICATIONS_TEST_MONTHLY, {}, true);
   }
 }
 

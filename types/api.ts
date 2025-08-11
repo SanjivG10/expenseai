@@ -1,5 +1,7 @@
-// API Response Types
+// Legacy API types for backward compatibility
+// Note: Most types are now organized in individual files (auth.ts, expenses.ts, etc.)
 
+// Legacy API Response wrapper (duplicate of common.ts - kept for backward compatibility)
 export interface ApiResponse<T = any> {
   success: boolean;
   message: string;
@@ -7,6 +9,7 @@ export interface ApiResponse<T = any> {
   code?: string;
 }
 
+// Legacy API Error response (duplicate of common.ts - kept for backward compatibility)
 export interface ApiError {
   success: false;
   message: string;
@@ -14,52 +17,9 @@ export interface ApiError {
   details?: any;
 }
 
-// Expense Types
-export interface Expense {
-  id: string;
-  user_id: string;
-  amount: number;
-  description: string;
-  category_id: string | null;
-  expense_date: string;
-  notes?: string;
-  receipt_image_url?: string;
-  created_at: string;
-  updated_at: string;
-}
+// Legacy types that might still be used in some parts of the codebase
+// These should be gradually migrated to the organized type files
 
-export interface CreateExpenseRequest {
-  amount: number;
-  description: string;
-  category: string;
-  date: string;
-  notes?: string;
-  receiptImage?: string | null;
-}
-
-export interface UpdateExpenseRequest extends Partial<CreateExpenseRequest> {}
-
-// Category Types
-export interface Category {
-  id: string;
-  user_id: string;
-  name: string;
-  icon: string;
-  color: string;
-  is_default: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CreateCategoryRequest {
-  name: string;
-  icon: string;
-  color: string;
-}
-
-export interface UpdateCategoryRequest extends Partial<CreateCategoryRequest> {}
-
-// User Profile Types
 export interface UserProfile {
   id: string;
   firstName: string;
@@ -68,12 +28,7 @@ export interface UserProfile {
   memberSince: string;
 }
 
-export interface UpdateProfileRequest {
-  firstName?: string;
-  lastName?: string;
-}
-
-// Dashboard Screen Response
+// Legacy dashboard response (use DashboardScreenResponse from dashboard.ts instead)
 export interface DashboardResponse {
   monthly_stats: {
     total: number;
@@ -81,34 +36,14 @@ export interface DashboardResponse {
     avg_daily: number;
     categories_count: number;
   };
-  recent_expenses: RecentExpense[];
-  calendar_data: Record<string, CalendarExpense[]>;
+  recent_expenses: any[]; // Use RecentExpense from dashboard.ts
+  calendar_data: Record<string, any[]>; // Use CalendarData from dashboard.ts
 }
 
-// Recent expense for dashboard (simplified structure)
-export interface RecentExpense {
-  id: string;
-  amount: number;
-  description: string;
-  category: string;
-  category_name: string;
-  category_icon: string;
-  date: string;
-}
-
-// Calendar expense (simplified structure)
-export interface CalendarExpense {
-  id: string;
-  amount: number;
-  description: string;
-  category_name: string;
-  category_icon: string;
-}
-
-// Expenses Screen Response
+// Legacy expenses response (use ExpensesScreenResponse from expenses.ts instead)
 export interface ExpensesResponse {
-  expenses: ExpenseWithCategory[];
-  categories: Category[];
+  expenses: any[]; // Use ExpenseWithCategory from expenses.ts
+  categories: any[]; // Use Category from categories.ts
   pagination: {
     current_page: number;
     total_pages: number;
@@ -121,36 +56,7 @@ export interface ExpensesResponse {
   };
 }
 
-// Expense with category information
-export interface ExpenseWithCategory {
-  id: string;
-  user_id: string;
-  amount: number;
-  description: string;
-  category_id: string | null;
-  expense_date: string;
-  notes?: string;
-  receipt_image_url?: string;
-  created_at: string;
-  updated_at: string;
-  category?: Category;
-  category_name?: string;
-  category_icon?: string;
-  category_color?: string;
-}
-
-export interface ExpensesQuery {
-  page?: number;
-  limit?: number;
-  search?: string;
-  category?: string;
-  startDate?: string;
-  endDate?: string;
-  sortBy?: 'date' | 'amount' | 'category';
-  sortOrder?: 'asc' | 'desc';
-}
-
-// Analytics Screen Response
+// Legacy analytics response (use AnalyticsScreenResponse from analytics.ts instead)
 export interface AnalyticsResponse {
   period: 'week' | 'month' | 'year';
   summary: {
@@ -164,56 +70,21 @@ export interface AnalyticsResponse {
     labels: string[];
     data: number[];
   };
-  category_breakdown: CategoryBreakdown[];
+  category_breakdown: any[]; // Use CategoryBreakdown from categories.ts
   monthly_comparison: {
     labels: string[];
     data: number[];
   };
 }
 
-// Category breakdown for analytics
-export interface CategoryBreakdown {
-  category_id: string;
-  category_name: string;
-  category_icon: string;
-  category_color: string;
-  amount: number;
-  percentage: number;
-  expense_count: number;
-}
-
-export interface AnalyticsQuery {
-  period?: 'week' | 'month' | 'year';
-}
-
-// Dashboard query parameters
-export interface DashboardQuery {
-  month?: number; // 1-12
-  year?: number; // e.g., 2024
-}
-
-// Settings Screen Response
+// Legacy settings response (use SettingsScreenResponse from settings.ts instead)
 export interface SettingsResponse {
   user_profile: any; // Will use Supabase User type
-  categories: CategoryWithStats[];
-  preferences: UserPreferences;
+  categories: any[]; // Use CategoryWithStats from categories.ts
+  preferences: any; // Use UserPreferences from preferences.ts
 }
 
-// Category with usage statistics
-export interface CategoryWithStats {
-  id: string;
-  user_id: string;
-  name: string;
-  icon: string;
-  color: string;
-  is_default: boolean;
-  created_at: string;
-  updated_at: string;
-  expense_count?: number;
-  total_amount?: number;
-}
-
-// User preferences from backend
+// Legacy user preferences (use UserPreferences from preferences.ts instead)
 export interface UserPreferences {
   user_id: string;
   default_category_id?: string;
@@ -225,7 +96,7 @@ export interface UserPreferences {
   updated_at: string;
 }
 
-// Camera/Receipt Processing
+// Legacy process receipt types (use ProcessReceiptRequest/Response from camera.ts instead)
 export interface ProcessReceiptRequest {
   image: string; // base64 encoded
 }

@@ -226,3 +226,54 @@ export type CreateCategoryData = z.infer<typeof createCategorySchema>;
 export type UpdateCategoryData = z.infer<typeof updateCategorySchema>;
 export type ProcessReceiptData = z.infer<typeof processReceiptSchema>;
 export type UploadImageData = z.infer<typeof uploadImageSchema>;
+
+// === USER PREFERENCES VALIDATION ===
+
+// Onboarding completion schema
+export const onboardingSchema = z.object({
+  daily_budget: z.number().optional(),
+  weekly_budget: z.number().optional(),
+  monthly_budget: z.number().optional(),
+  notifications_enabled: z.boolean(),
+  currency: z
+    .string()
+    .length(3, 'Currency must be a 3-character code')
+    .regex(/^[A-Z]{3}$/, 'Currency must be uppercase letters')
+    .optional()
+    .default('USD'),
+});
+
+// Update preferences schema
+export const updatePreferencesSchema = z.object({
+  daily_budget: z.number().min(0, 'Daily budget must be at least $0').optional(),
+  weekly_budget: z.number().min(0, 'Weekly budget must be at least $0').optional(),
+  monthly_budget: z.number().min(0, 'Monthly budget must be at least $0').optional(),
+  notifications_enabled: z.boolean().optional(),
+  daily_notifications: z.boolean().optional(),
+  weekly_notifications: z.boolean().optional(),
+  monthly_notifications: z.boolean().optional(),
+  daily_notification_time: z
+    .number()
+    .min(0, 'Time must be between 0-1439 minutes')
+    .max(1439, 'Time must be between 0-1439 minutes')
+    .optional(),
+  weekly_notification_time: z
+    .number()
+    .min(0, 'Time must be between 0-1439 minutes')
+    .max(1439, 'Time must be between 0-1439 minutes')
+    .optional(),
+  monthly_notification_time: z
+    .number()
+    .min(0, 'Time must be between 0-1439 minutes')
+    .max(1439, 'Time must be between 0-1439 minutes')
+    .optional(),
+  currency: z
+    .string()
+    .length(3, 'Currency must be a 3-character code')
+    .regex(/^[A-Z]{3}$/, 'Currency must be uppercase letters')
+    .optional(),
+});
+
+// Type exports for preferences
+export type OnboardingData = z.infer<typeof onboardingSchema>;
+export type UpdatePreferencesData = z.infer<typeof updatePreferencesSchema>;

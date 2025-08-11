@@ -24,11 +24,8 @@ export * from './settings';
 // Camera/Receipt processing types
 export * from './camera';
 
-// Legacy compatibility - re-export some common types with old names
-// TODO: Remove these after migrating all components to use new organized structure
-export type { ApiResponse, ApiError } from './common';
-export type { Category, CategoryWithStats } from './categories';
-export type { Expense, ExpenseWithCategory } from './expenses';
+// User preferences and onboarding types
+export * from './preferences';
 
 // Type maps for validation
 export const ENDPOINT_REQUEST_TYPES = {
@@ -39,14 +36,14 @@ export const ENDPOINT_REQUEST_TYPES = {
   'POST /api/v1/auth/forgot-password': 'ForgotPasswordRequest',
   'POST /api/v1/auth/reset-password': 'ResetPasswordRequest',
   'POST /api/v1/auth/verify-otp': 'VerifyOTPRequest',
-  
+
   // Screen endpoints
   'GET /api/v1/screens/dashboard': 'DashboardScreenQuery',
-  'GET /api/v1/screens/expenses': 'ExpensesScreenQuery', 
+  'GET /api/v1/screens/expenses': 'ExpensesScreenQuery',
   'GET /api/v1/screens/analytics': 'AnalyticsScreenQuery',
   'GET /api/v1/screens/settings': 'null', // No query params
   'POST /api/v1/screens/camera/process-receipt': 'ProcessReceiptRequest',
-  
+
   // CRUD endpoints
   'POST /api/v1/expenses': 'CreateExpenseRequest',
   'PUT /api/v1/expenses/:id': 'UpdateExpenseRequest',
@@ -65,14 +62,14 @@ export const ENDPOINT_RESPONSE_TYPES = {
   'POST /api/v1/auth/reset-password': 'ResetPasswordResponse',
   'POST /api/v1/auth/verify-otp': 'VerifyOTPResponse',
   'GET /api/v1/auth/profile': 'GetProfileResponse',
-  
+
   // Screen endpoints
   'GET /api/v1/screens/dashboard': 'DashboardScreenResponse',
   'GET /api/v1/screens/expenses': 'ExpensesScreenResponse',
-  'GET /api/v1/screens/analytics': 'AnalyticsScreenResponse', 
+  'GET /api/v1/screens/analytics': 'AnalyticsScreenResponse',
   'GET /api/v1/screens/settings': 'SettingsScreenResponse',
   'POST /api/v1/screens/camera/process-receipt': 'ProcessReceiptResponse',
-  
+
   // CRUD endpoints
   'POST /api/v1/expenses': 'CreateExpenseResponse',
   'PUT /api/v1/expenses/:id': 'UpdateExpenseResponse',

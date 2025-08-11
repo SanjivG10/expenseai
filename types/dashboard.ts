@@ -38,9 +38,11 @@ export type CalendarData = Record<string, CalendarExpense[]>; // Key: YYYY-MM-DD
 export interface DashboardScreenResponse {
   success: boolean;
   message: string;
-  data: {
-    monthly_stats: MonthlyStats;
-    recent_expenses: RecentExpense[];
-    calendar_data: CalendarData;
-  };
+  data: DashboardScreenData;
+}
+
+export interface DashboardScreenData {
+  monthly_stats: MonthlyStats;
+  recent_expenses: RecentExpense[];
+  calendar_data: CalendarData;
 }

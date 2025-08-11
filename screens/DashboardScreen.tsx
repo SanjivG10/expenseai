@@ -31,19 +31,18 @@ export default function DashboardScreen() {
       const dateToUse = targetDate || selectedDate;
       const query: DashboardScreenQuery = {
         month: dateToUse.getMonth() + 1, // Convert 0-11 to 1-12
-        year: dateToUse.getFullYear()
+        year: dateToUse.getFullYear(),
       };
 
       const response = await apiService.getDashboardData(query);
 
-      if (response.success) {
-        console.log('Dashboard data:', response.data);
+      if (response.success && response.data) {
         setDashboardData(response.data);
       } else {
         Alert.alert('Error', response.message || 'Failed to load dashboard data');
       }
     } catch (error) {
-      console.error('Dashboard fetch error:', error);
+      console.error('Dashboard fetch error:', JSON.stringify(error, null, 2));
       Alert.alert('Error', 'Failed to load dashboard data');
     } finally {
       setIsLoading(false);
@@ -121,7 +120,7 @@ export default function DashboardScreen() {
         {/* Calendar View */}
         {showCalendarView && (
           <View className="mx-6 mt-6">
-            <CalendarView 
+            <CalendarView
               onDaySelect={handleCalendarDaySelect}
               onMonthChange={handleMonthChange}
               calendarData={dashboardData?.calendar_data || {}}

@@ -13,12 +13,14 @@ import {
   Expense,
   ExpensesScreenQuery,
   ExpensesScreenResponse,
+  ExpensesScreenData,
   GetCategories,
   ProcessReceiptRequest,
   ProcessReceiptResponse,
   UpdateCategoryRequest,
   UpdateExpenseRequest,
   UpdateProfileRequest,
+  DashboardScreenData,
 } from '../types';
 
 const url = buildApiUrl(API_ENDPOINTS.AUTH_SIGNUP);
@@ -81,6 +83,7 @@ class ApiService {
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
     try {
+      console.log('request', url);
       const response = await fetch(url, {
         ...config,
         signal: controller.signal,
@@ -150,9 +153,7 @@ class ApiService {
   }
 
   // Screen-centric endpoints
-  async getDashboardData(
-    query?: DashboardScreenQuery
-  ): Promise<ApiResponse<DashboardScreenResponse>> {
+  async getDashboardData(query?: DashboardScreenQuery): Promise<ApiResponse<DashboardScreenData>> {
     const queryString = query ? new URLSearchParams(query as any).toString() : '';
     const endpoint = queryString
       ? `${API_ENDPOINTS.SCREEN_DASHBOARD}?${queryString}`
@@ -160,7 +161,7 @@ class ApiService {
     return this.get(endpoint, true);
   }
 
-  async getExpensesData(query?: ExpensesScreenQuery): Promise<ApiResponse<ExpensesScreenResponse>> {
+  async getExpensesData(query?: ExpensesScreenQuery): Promise<ApiResponse<ExpensesScreenData>> {
     const queryString = query ? new URLSearchParams(query as any).toString() : '';
     const endpoint = queryString
       ? `${API_ENDPOINTS.SCREEN_EXPENSES}?${queryString}`

@@ -81,26 +81,28 @@ export interface ExpensesScreenQuery {
   sort_order?: 'asc' | 'desc'; // Default: 'desc'
 }
 
+export interface ExpensesScreenData {
+  expenses: ExpenseWithCategory[];
+  categories: Array<{
+    id: string;
+    name: string;
+    icon: string;
+    color: string;
+  }>;
+  pagination: {
+    current_page: number;
+    total_pages: number;
+    total_items: number;
+    has_more: boolean;
+  };
+  summary: {
+    total_expenses: number;
+    filtered_total: number;
+  };
+}
+
 export interface ExpensesScreenResponse {
   success: boolean;
   message: string;
-  data: {
-    expenses: ExpenseWithCategory[];
-    categories: Array<{
-      id: string;
-      name: string;
-      icon: string;
-      color: string;
-    }>;
-    pagination: {
-      current_page: number;
-      total_pages: number;
-      total_items: number;
-      has_more: boolean;
-    };
-    summary: {
-      total_expenses: number;
-      filtered_total: number;
-    };
-  };
+  data: ExpensesScreenData;
 }

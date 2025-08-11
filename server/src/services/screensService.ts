@@ -145,6 +145,8 @@ export const getExpensesDataService = async (
   const { page, limit, search, category, start_date, end_date, sort_by, sort_order } = query;
   const offset = (page - 1) * limit;
 
+  console.log('query', JSON.stringify(query, null, 2));
+
   // Build query with filters
   let expensesQuery = supabaseAdmin
     .from('expenses')
@@ -156,7 +158,8 @@ export const getExpensesDataService = async (
       expense_date,
       notes,
       receipt_image_url,
-      categories (
+      category_id,
+      categories!category_id (
         id,
         name,
         icon,
@@ -168,11 +171,11 @@ export const getExpensesDataService = async (
     .eq('user_id', userId);
 
   // Apply filters
-  if (search) {
+  if (search && search !== '' && search !== 'undefined') {
     expensesQuery = expensesQuery.ilike('description', `%${search}%`);
   }
 
-  if (category) {
+  if (category && category !== '' && category !== 'undefined') {
     expensesQuery = expensesQuery.eq('category_id', category);
   }
 
@@ -185,8 +188,7 @@ export const getExpensesDataService = async (
   }
 
   // Apply sorting
-  const sortColumn =
-    sort_by === 'category' ? 'categories.name' : sort_by === 'amount' ? 'amount' : 'expense_date';
+  const sortColumn = sort_by === 'amount' ? 'amount' : 'expense_date';
   expensesQuery = expensesQuery.order(sortColumn, { ascending: sort_order === 'asc' });
 
   // Apply pagination
@@ -194,7 +196,7 @@ export const getExpensesDataService = async (
 
   const { data: expensesData, error: expensesError, count: totalCount } = await expensesQuery;
 
-  if (expensesError) throw new Error('Failed to fetch expenses');
+  if (expensesError) throw new Error(expensesError.message || 'Failed to fetch expenses');
 
   // Get all categories for filter dropdown
   const { data: categoriesData, error: categoriesError } = await supabaseAdmin
@@ -203,24 +205,25 @@ export const getExpensesDataService = async (
     .eq('user_id', userId)
     .order('name');
 
-  if (categoriesError) throw new Error('Failed to fetch categories');
+  if (categoriesError) throw new Error(categoriesError.message || 'Failed to fetch categories');
 
-  // Transform expenses data
-  const expenses: ExpenseWithCategory[] = expensesData.map((expense) => ({
+  const expenses: ExpenseWithCategory[] = expensesData.map((expense: any) => ({
     id: expense.id,
     user_id: userId,
     amount: Number(expense.amount),
     description: expense.description,
-    category_id: expense.categories[0]?.id || null,
+    category_id: expense.categories?.id || null,
     expense_date: expense.expense_date,
     notes: expense.notes,
     receipt_image_url: expense.receipt_image_url,
     created_at: '',
     updated_at: '',
-    category_name: expense.categories[0]?.name,
-    category_icon: expense.categories[0]?.icon,
-    category_color: expense.categories[0]?.color,
+    category_name: expense.categories?.name,
+    category_icon: expense.categories?.icon,
+    category_color: expense.categories?.color,
   }));
+
+  console.log('expenses', JSON.stringify(expenses, null, 2));
 
   // Calculate summary
   const filteredTotal = expenses.reduce((sum, expense) => sum + expense.amount, 0);
@@ -277,6 +280,8 @@ export const getAnalyticsDataService = async (
     .eq('user_id', userId)
     .gte('expense_date', format(startDate, 'yyyy-MM-dd'))
     .lte('expense_date', format(endDate, 'yyyy-MM-dd'));
+
+  console.log('error', JSON.stringify(currentError, null, 2));
 
   if (currentError) throw new Error('Failed to fetch current period expenses');
 

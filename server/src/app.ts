@@ -51,15 +51,21 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// simple middleware to log the  request path and type
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path}`);
+  next();
+});
+
 // Enhanced request/response logging middleware
-if (env.NODE_ENV !== 'test') {
-  app.use(requestResponseLogger);
-  
-  // Keep Morgan for additional HTTP logging in production
-  if (env.NODE_ENV === 'production') {
-    app.use(morgan('combined'));
-  }
-}
+// if (env.NODE_ENV !== 'test') {
+//   app.use(requestResponseLogger);
+
+//   // Keep Morgan for additional HTTP logging in production
+//   if (env.NODE_ENV === 'production') {
+//     app.use(morgan('combined'));
+//   }
+// }
 
 // Rate limiting
 app.use('/api/', apiLimiter);

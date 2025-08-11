@@ -69,7 +69,8 @@ export const getDashboardDataService = async (
       amount,
       description,
       expense_date,
-      categories (
+      category_id,
+      categories!category_id (
         id,
         name,
         icon
@@ -82,15 +83,17 @@ export const getDashboardDataService = async (
 
   if (recentError) throw new Error('Failed to fetch recent expenses');
 
-  const recentExpenses: RecentExpense[] = recentExpensesData.map((expense) => ({
+  const recentExpenses: RecentExpense[] = recentExpensesData.map((expense: any) => ({
     id: expense.id,
     amount: Number(expense.amount),
     description: expense.description,
-    category: expense.categories[0]?.id || '',
-    category_name: expense.categories[0]?.name || 'Other',
-    category_icon: expense.categories[0]?.icon || 'card-outline',
+    category: expense.category_id || '',
+    category_name: expense.categories?.name || 'Other',
+    category_icon: expense.categories?.icon || 'card-outline',
     date: expense.expense_date,
   }));
+
+  console.log(JSON.stringify(recentExpenses, null, 2));
 
   // Get calendar data for current month
   const { data: calendarExpensesData, error: calendarError } = await supabaseAdmin
@@ -101,7 +104,8 @@ export const getDashboardDataService = async (
       amount,
       description,
       expense_date,
-      categories (
+      category_id,
+      categories!category_id (
         name,
         icon
       )
@@ -116,7 +120,7 @@ export const getDashboardDataService = async (
 
   // Group expenses by date
   const calendarData: CalendarData = {};
-  calendarExpensesData.forEach((expense) => {
+  calendarExpensesData.forEach((expense: any) => {
     const date = expense.expense_date;
     if (!calendarData[date]) {
       calendarData[date] = [];
@@ -125,8 +129,8 @@ export const getDashboardDataService = async (
       id: expense.id,
       amount: Number(expense.amount),
       description: expense.description,
-      category_name: expense.categories[0]?.name || 'Other',
-      category_icon: expense.categories[0]?.icon || 'card-outline',
+      category_name: expense.categories?.name || 'Other',
+      category_icon: expense.categories?.icon || 'card-outline',
     });
   });
 

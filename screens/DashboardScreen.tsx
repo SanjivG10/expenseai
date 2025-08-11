@@ -20,6 +20,8 @@ export default function DashboardScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const navigation = useNavigation();
 
+  console.log({ dashboardData: JSON.stringify(dashboardData, null, 2) });
+
   const currentMonthName = format(selectedDate, 'MMMM yyyy');
 
   // Fetch dashboard data from API
@@ -179,7 +181,7 @@ export default function DashboardScreen() {
                 key={expense.id}
                 className="mb-3 flex-row items-center rounded-lg border border-border bg-secondary p-4">
                 <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-accent">
-                  <Ionicons name="receipt-outline" size={20} color="#FFFFFF" />
+                  <Ionicons name={expense.category_icon as any} size={20} color="#FFFFFF" />
                 </View>
                 <View className="flex-1">
                   <Text className="font-medium text-foreground">{expense.description}</Text>

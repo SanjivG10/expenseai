@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Alert,
-  RefreshControl,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import AddExpenseScreen from './AddExpenseScreen';
-import { apiService } from '../services/api';
-import { ExpensesScreenData, ExpenseWithCategory, Category, ExpensesScreenQuery } from '../types';
+import { useEffect, useState } from 'react';
+import {
+  Alert,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import LoadingScreen, { InlineLoader } from '../components/LoadingScreen';
+import { apiService } from '../services/api';
+import { ExpensesScreenData, ExpensesScreenQuery, ExpenseWithCategory } from '../types';
+import AddExpenseScreen from './AddExpenseScreen';
 
 // Custom debounce hook
 const useDebounce = (value: string, delay: number) => {
@@ -290,6 +290,12 @@ export default function ExpensesScreen() {
                 <Text className="mt-1 text-sm text-muted-foreground">
                   {expense.category_name || 'Uncategorized'} • {expense.expense_date}
                 </Text>
+                <Text className="mt-1 text-sm text-muted-foreground">{expense.description}</Text>
+                {expense.notes && (
+                  <Text className="mt-1 rounded-lg bg-muted px-2 py-1 text-sm text-muted-foreground">
+                    {expense.notes}
+                  </Text>
+                )}
               </View>
               <View className="items-end">
                 <Text className="text-lg font-bold text-foreground">

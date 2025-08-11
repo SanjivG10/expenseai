@@ -438,9 +438,7 @@ export default function AddExpenseScreen({
 
           {/* Image Section */}
           <View className="mt-4">
-            <Text className="mb-2 text-sm font-medium text-foreground">
-              Receipt Image (Optional)
-            </Text>
+            <Text className="mb-2 text-sm font-medium text-foreground">Image (Optional)</Text>
             {selectedImage ? (
               <View className="relative">
                 <Image
@@ -461,7 +459,7 @@ export default function AddExpenseScreen({
                 disabled={isLoading}
                 className="items-center rounded-lg border-2 border-dashed border-border bg-secondary p-8">
                 <Ionicons name="camera-outline" size={32} color="#a3a3a3" />
-                <Text className="mt-2 text-muted-foreground">Add Receipt Image</Text>
+                <Text className="mt-2 text-muted-foreground">Add Image</Text>
               </TouchableOpacity>
             )}
           </View>

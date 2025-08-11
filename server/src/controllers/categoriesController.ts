@@ -194,20 +194,9 @@ export const deleteCategory = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Don't allow deleting default categories (optional restriction)
-    if (existingCategory.is_default) {
-      const response: ApiResponse = {
-        success: false,
-        message: 'Cannot delete default categories',
-        error: 'Default category',
-      };
-      res.status(400).json(response);
-      return;
-    }
-
     // Get or create "Other" category to reassign expenses
     let otherCategory;
-    const { data: existingOther, error: otherCheckError } = await supabaseAdmin
+    const { data: existingOther } = await supabaseAdmin
       .from('categories')
       .select('id')
       .eq('user_id', userId)

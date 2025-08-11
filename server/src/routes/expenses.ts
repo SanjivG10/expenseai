@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import { auth } from '../middleware/auth';
 import { validate } from '../middleware/validation';
-import { 
+import {
   createExpense,
   updateExpense,
-  deleteExpense
+  deleteExpense,
+  uploadReceiptImage,
 } from '../controllers/expensesController';
-import { createExpenseSchema, updateExpenseSchema } from '../utils/validation';
+import { createExpenseSchema, updateExpenseSchema, uploadImageSchema } from '../utils/validation';
 
 const router = Router();
 
@@ -17,5 +18,8 @@ router.use(auth);
 router.post('/', validate(createExpenseSchema, 'body'), createExpense);
 router.put('/:id', validate(updateExpenseSchema, 'body'), updateExpense);
 router.delete('/:id', deleteExpense);
+
+// Upload receipt image
+router.post('/upload-receipt', validate(uploadImageSchema, 'body'), uploadReceiptImage);
 
 export default router;

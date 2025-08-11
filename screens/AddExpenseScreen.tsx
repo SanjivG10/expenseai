@@ -177,12 +177,22 @@ export default function AddExpenseScreen({
     setIsLoading(true);
 
     try {
-      // Convert image to base64 if selected
-      let imageData = null;
+      // Handle image upload if selected
+      let imageUrl = null;
       if (selectedImage && selectedImage.startsWith('file://')) {
-        imageData = await convertImageToBase64(selectedImage);
-      } else if (selectedImage) {
-        imageData = selectedImage; // Already processed or URL
+        // Convert image to base64 and upload to Supabase
+        const imageData = await convertImageToBase64(selectedImage);
+        if (imageData) {
+          const uploadResponse = await apiService.uploadReceiptImage(imageData);
+          if (uploadResponse.success && uploadResponse.data) {
+            imageUrl = uploadResponse.data.image_url;
+          } else {
+            throw new Error('Failed to upload image');
+          }
+        }
+      } else if (selectedImage && selectedImage.startsWith('http')) {
+        // Already a URL, use as is
+        imageUrl = selectedImage;
       }
 
       const expenseData: CreateExpenseRequest = {
@@ -191,7 +201,7 @@ export default function AddExpenseScreen({
         category_id: data.category_id,
         expense_date: data.expense_date,
         notes: data.notes || undefined,
-        receipt_image: imageData || undefined,
+        receipt_image: imageUrl || undefined,
       };
 
       let response;

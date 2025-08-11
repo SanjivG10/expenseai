@@ -105,7 +105,7 @@ export const createExpenseSchema = z.object({
   category_id: z.string().min(1, 'Category ID is required'),
   expense_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
   notes: z.string().max(1000, 'Notes too long').optional(),
-  receipt_image: z.string().optional(), // base64 string
+  receipt_image: z.string().url('Invalid image URL').optional(), // URL string
 });
 
 export const updateExpenseSchema = z.object({
@@ -121,7 +121,7 @@ export const updateExpenseSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)')
     .optional(),
   notes: z.string().max(1000, 'Notes too long').optional(),
-  receipt_image: z.string().optional(),
+  receipt_image: z.string().url('Invalid image URL').optional(),
 });
 
 // Category CRUD schemas
@@ -142,6 +142,11 @@ export const updateCategorySchema = z.object({
 
 // Receipt processing schema
 export const processReceiptSchema = z.object({
+  image: z.string().min(1, 'Image is required'), // base64 encoded image
+});
+
+// Upload image schema
+export const uploadImageSchema = z.object({
   image: z.string().min(1, 'Image is required'), // base64 encoded image
 });
 
@@ -220,3 +225,4 @@ export type UpdateExpenseData = z.infer<typeof updateExpenseSchema>;
 export type CreateCategoryData = z.infer<typeof createCategorySchema>;
 export type UpdateCategoryData = z.infer<typeof updateCategorySchema>;
 export type ProcessReceiptData = z.infer<typeof processReceiptSchema>;
+export type UploadImageData = z.infer<typeof uploadImageSchema>;

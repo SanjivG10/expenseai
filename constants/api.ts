@@ -27,6 +27,7 @@ export const API_ENDPOINTS = {
   // Individual CRUD operations
   EXPENSES: '/expenses',
   EXPENSE_BY_ID: '/expenses/:id',
+  EXPENSE_UPLOAD_RECEIPT: '/expenses/upload-receipt',
   CATEGORIES: '/categories',
   CATEGORY_BY_ID: '/categories/:id',
   USERS_PROFILE: '/users/profile',

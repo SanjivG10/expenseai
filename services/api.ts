@@ -202,6 +202,10 @@ class ApiService {
     return this.delete(endpoint, true);
   }
 
+  async uploadReceiptImage(imageData: string): Promise<ApiResponse<{ image_url: string; file_name: string }>> {
+    return this.post(API_ENDPOINTS.EXPENSE_UPLOAD_RECEIPT, { image: imageData }, true);
+  }
+
   // Individual CRUD operations for categories
   async createCategory(data: CreateCategoryRequest): Promise<ApiResponse<Category>> {
     return this.post(API_ENDPOINTS.CATEGORIES, data, true);

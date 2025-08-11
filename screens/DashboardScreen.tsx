@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
-import AddExpenseScreen from './AddExpenseScreen';
-import CalendarView from '../components/CalendarView';
 import { format } from 'date-fns';
-import { apiService } from '../services/api';
-import { DashboardScreenResponse, RecentExpense, DashboardScreenQuery } from '../types';
-import { ROUTES } from '../constants/urls';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
+import { Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import CalendarView from '../components/CalendarView';
 import LoadingScreen from '../components/LoadingScreen';
+import { ROUTES } from '../constants/urls';
+import { apiService } from '../services/api';
+import { DashboardScreenQuery, DashboardScreenResponse } from '../types';
+import AddExpenseScreen from './AddExpenseScreen';
 
 export default function DashboardScreen() {
   const [showAddExpense, setShowAddExpense] = useState(false);

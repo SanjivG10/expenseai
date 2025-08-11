@@ -19,6 +19,7 @@ import { apiService } from '../services/api';
 import CategoriesScreen from './CategoriesScreen';
 import FAQScreen from './FAQScreen';
 import ProfileScreen from './ProfileScreen';
+import Toast from 'react-native-toast-message';
 
 // Storage key for notification preference
 const NOTIFICATION_PREFERENCE_KEY = '@expense_ai_notification_preference';
@@ -29,7 +30,7 @@ export default function SettingsScreen() {
   const [showFAQModal, setShowFAQModal] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const { user, logout } = useAuth();
+  const { user, logout, setUser } = useAuth();
 
   // Load notification preference from storage
   useEffect(() => {
@@ -70,11 +71,19 @@ export default function SettingsScreen() {
 
   const handleProfileSave = async (data: { firstName: string; lastName: string }) => {
     try {
+      if (!user) return;
       await apiService.updateProfile(data);
-      Alert.alert('Success', 'Profile updated successfully');
+      setUser({ ...user, firstName: data.firstName, lastName: data.lastName });
+      Toast.show({
+        text1: 'Profile updated successfully',
+        type: 'success',
+      });
     } catch (error) {
       console.error('Profile update error:', error);
-      Alert.alert('Error', 'Failed to update profile');
+      Toast.show({
+        text1: 'Failed to update profile',
+        type: 'error',
+      });
     }
   };
 

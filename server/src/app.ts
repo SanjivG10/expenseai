@@ -1,16 +1,13 @@
-import express from 'express';
 import cors from 'cors';
+import express from 'express';
 import helmet from 'helmet';
-import morgan from 'morgan';
-import { errorHandler, notFoundHandler, handleUncaughtExceptions } from './middleware/errorHandler';
-import { apiLimiter } from './middleware/rateLimiter';
-import { requestResponseLogger } from './middleware/responseLogger';
-import authRoutes from './routes/auth';
-import screenRoutes from './routes/screens';
-import expenseRoutes from './routes/expenses';
-import categoryRoutes from './routes/categories';
-import userRoutes from './routes/users';
 import env from './config/env';
+import { errorHandler, handleUncaughtExceptions, notFoundHandler } from './middleware/errorHandler';
+import { apiLimiter } from './middleware/rateLimiter';
+import authRoutes from './routes/auth';
+import categoryRoutes from './routes/categories';
+import expenseRoutes from './routes/expenses';
+import screenRoutes from './routes/screens';
 
 // Handle uncaught exceptions
 handleUncaughtExceptions();
@@ -89,7 +86,6 @@ app.use(`/api/${env.API_VERSION}/auth`, authRoutes);
 app.use(`/api/${env.API_VERSION}/screens`, screenRoutes);
 app.use(`/api/${env.API_VERSION}/expenses`, expenseRoutes);
 app.use(`/api/${env.API_VERSION}/categories`, categoryRoutes);
-app.use(`/api/${env.API_VERSION}/users`, userRoutes);
 
 // Catch 404 and forward to error handler
 app.use(notFoundHandler);

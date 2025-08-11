@@ -82,8 +82,6 @@ class ApiService {
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
     try {
-      console.log('request', url);
-      console.log('request config:', config);
       const response = await fetch(url, {
         ...config,
         signal: controller.signal,
@@ -229,7 +227,7 @@ class ApiService {
 
   // User profile operations
   async updateProfile(data: UpdateProfileRequest): Promise<ApiResponse<any>> {
-    return this.put(API_ENDPOINTS.USERS_PROFILE, data, true);
+    return this.put(API_ENDPOINTS.AUTH_PROFILE, data, true);
   }
 }
 

@@ -31,6 +31,7 @@ interface AuthContextType extends AuthState {
   resetPasswordWithOTP: (email: string, otp: string, password: string) => Promise<void>;
   updateProfile: (userData: Partial<User>) => Promise<void>;
   refreshToken: () => Promise<void>;
+  setUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -368,6 +369,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const setUser = (user: User) => {
+    AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+    setAuthState((prev) => ({
+      ...prev,
+      user,
+    }));
+  };
+
   const value: AuthContextType = {
     ...authState,
     login,
@@ -377,6 +386,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     resetPasswordWithOTP,
     updateProfile,
     refreshToken,
+    setUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

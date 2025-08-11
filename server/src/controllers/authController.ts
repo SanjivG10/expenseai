@@ -169,6 +169,11 @@ export class AuthController {
       const validatedData = validateSchema(updateProfileSchema, req.body);
       const user = (req as any).user;
 
+      console.log({
+        user,
+        validatedData,
+      });
+
       const updatedUser = await authService.updateProfile(user.id, {
         firstName: validatedData.firstName || '',
         lastName: validatedData.lastName || '',

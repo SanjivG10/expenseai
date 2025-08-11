@@ -1,7 +1,7 @@
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
 import env from '../config/env';
-import { supabaseAdmin, supabase } from '../config/supabase';
+import { supabase, supabaseAdmin } from '../config/supabase';
 import { AppError, AuthenticationError, DuplicateError } from '../utils/errors';
 import { createDefaultCategoriesForUser } from './setupService';
 
@@ -91,6 +91,7 @@ export class AuthService {
           firstName,
           lastName,
         },
+        email_confirm: true,
       });
 
       if (error) {
@@ -125,13 +126,13 @@ export class AuthService {
 
     try {
       // Authenticate with Supabase
-      const { data, error } = await supabaseAdmin.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error || !data.user) {
-        throw new AuthenticationError('Invalid email or password');
+        throw new AuthenticationError(error?.message || 'Invalid email or password');
       }
 
       const user = this.mapSupabaseUser(data.user);

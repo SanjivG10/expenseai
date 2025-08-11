@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { supabase } from '../config/supabase';
+import { supabaseAdmin } from '../config/supabase';
 import { ApiResponse } from '../types/api';
 import { CreateCategoryData, UpdateCategoryData } from '../utils/validation';
 
@@ -10,7 +10,7 @@ export const createCategory = async (req: Request, res: Response): Promise<void>
     const categoryData = req.body as CreateCategoryData;
 
     // Check if category name already exists for this user
-    const { data: existingCategory, error: checkError } = await supabase
+    const { data: existingCategory, error: checkError } = await supabaseAdmin
       .from('categories')
       .select('id')
       .eq('user_id', userId)
@@ -27,7 +27,7 @@ export const createCategory = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('categories')
       .insert({
         user_id: userId,
@@ -77,7 +77,7 @@ export const updateCategory = async (req: Request, res: Response): Promise<void>
     const updateData = req.body as UpdateCategoryData;
 
     // First check if category belongs to user
-    const { data: existingCategory, error: checkError } = await supabase
+    const { data: existingCategory, error: checkError } = await supabaseAdmin
       .from('categories')
       .select('id, is_default')
       .eq('id', categoryId)
@@ -107,7 +107,7 @@ export const updateCategory = async (req: Request, res: Response): Promise<void>
 
     // Check for duplicate name if name is being updated
     if (updateData.name) {
-      const { data: duplicateCheck } = await supabase
+      const { data: duplicateCheck } = await supabaseAdmin
         .from('categories')
         .select('id')
         .eq('user_id', userId)
@@ -127,7 +127,7 @@ export const updateCategory = async (req: Request, res: Response): Promise<void>
     }
 
     // Update category
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('categories')
       .update({
         ...(updateData.name && { name: updateData.name }),
@@ -177,7 +177,7 @@ export const deleteCategory = async (req: Request, res: Response): Promise<void>
     const categoryId = req.params.id;
 
     // First check if category belongs to user
-    const { data: existingCategory, error: checkError } = await supabase
+    const { data: existingCategory, error: checkError } = await supabaseAdmin
       .from('categories')
       .select('id, is_default, name')
       .eq('id', categoryId)
@@ -207,7 +207,7 @@ export const deleteCategory = async (req: Request, res: Response): Promise<void>
 
     // Get or create "Other" category to reassign expenses
     let otherCategory;
-    const { data: existingOther, error: otherCheckError } = await supabase
+    const { data: existingOther, error: otherCheckError } = await supabaseAdmin
       .from('categories')
       .select('id')
       .eq('user_id', userId)
@@ -218,7 +218,7 @@ export const deleteCategory = async (req: Request, res: Response): Promise<void>
       otherCategory = existingOther;
     } else {
       // Create "Other" category if it doesn't exist
-      const { data: newOther, error: createOtherError } = await supabase
+      const { data: newOther, error: createOtherError } = await supabaseAdmin
         .from('categories')
         .insert({
           user_id: userId,
@@ -245,7 +245,7 @@ export const deleteCategory = async (req: Request, res: Response): Promise<void>
     }
 
     // Update all expenses to use "Other" category
-    const { error: updateExpensesError } = await supabase
+    const { error: updateExpensesError } = await supabaseAdmin
       .from('expenses')
       .update({ category_id: otherCategory.id })
       .eq('category_id', categoryId)
@@ -263,7 +263,7 @@ export const deleteCategory = async (req: Request, res: Response): Promise<void>
     }
 
     // Delete category
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('categories')
       .delete()
       .eq('id', categoryId)

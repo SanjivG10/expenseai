@@ -1,4 +1,4 @@
-import { supabase } from '../config/supabase';
+import { supabaseAdmin } from '../config/supabase';
 
 // Default categories that will be created for new users
 const defaultCategories = [
@@ -16,7 +16,7 @@ const defaultCategories = [
 export const createDefaultCategoriesForUser = async (userId: string): Promise<void> => {
   try {
     // Check if user already has categories
-    const { data: existingCategories, error: checkError } = await supabase
+    const { data: existingCategories, error: checkError } = await supabaseAdmin
       .from('categories')
       .select('id')
       .eq('user_id', userId)
@@ -38,7 +38,9 @@ export const createDefaultCategoriesForUser = async (userId: string): Promise<vo
       is_default: true,
     }));
 
-    const { error: insertError } = await supabase.from('categories').insert(categoriesToInsert);
+    const { error: insertError } = await supabaseAdmin
+      .from('categories')
+      .insert(categoriesToInsert);
 
     if (insertError) {
       throw new Error(`Failed to create default categories: ${insertError.message}`);

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { supabase } from '../config/supabase';
+import { supabaseAdmin } from '../config/supabase';
 import { ApiResponse } from '../types/api';
 import { UpdateProfileData } from '../utils/validation';
 
@@ -19,7 +19,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       };
     }
 
-    const { data, error } = await supabase.auth.updateUser(updatePayload);
+    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(userId, updatePayload);
 
     if (error) {
       console.error('Update profile error:', error);

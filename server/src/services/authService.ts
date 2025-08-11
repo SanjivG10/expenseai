@@ -1,7 +1,7 @@
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
 import env from '../config/env';
-import { supabase, supabaseAdmin } from '../config/supabase';
+import { supabaseAdmin, supabase } from '../config/supabase';
 import { AppError, AuthenticationError, DuplicateError } from '../utils/errors';
 import { createDefaultCategoriesForUser } from './setupService';
 
@@ -75,23 +75,21 @@ export class AuthService {
       // Check if user already exists
       const { data: existingUser } = await supabase
         .from('auth.users')
-        .select('email')
+        .select('*')
         .eq('email', email)
         .single();
 
-      if (existingUser) {
+      if (existingUser && existingUser.users.length > 0) {
         throw new DuplicateError('User with this email already exists');
       }
 
       // Create user with Supabase Auth
-      const { data, error } = await supabase.auth.signUp({
+      const { data, error } = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
-        options: {
-          data: {
-            firstName,
-            lastName,
-          },
+        user_metadata: {
+          firstName,
+          lastName,
         },
       });
 
@@ -127,7 +125,7 @@ export class AuthService {
 
     try {
       // Authenticate with Supabase
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabaseAdmin.auth.signInWithPassword({
         email,
         password,
       });
@@ -156,7 +154,10 @@ export class AuthService {
   async forgotPassword(email: string): Promise<void> {
     try {
       // Use Supabase's OTP system for password reset
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const { error } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'recovery',
+        email: email,
+      });
 
       if (error) {
         throw new AppError(
@@ -178,7 +179,7 @@ export class AuthService {
   async resetPasswordWithOTP(email: string, otp: string, newPassword: string): Promise<void> {
     try {
       // Verify OTP and update password in one step
-      const { error } = await supabase.auth.verifyOtp({
+      const { error } = await supabaseAdmin.auth.verifyOtp({
         email,
         token: otp,
         type: 'magiclink',
@@ -189,7 +190,7 @@ export class AuthService {
       }
 
       // Now update the password
-      const { error: updateError } = await supabase.auth.updateUser({
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(email, {
         password: newPassword,
       });
 
@@ -232,7 +233,7 @@ export class AuthService {
   // Logout user (invalidate refresh token)
   async logout(): Promise<void> {
     try {
-      await supabase.auth.signOut();
+      // Note: With admin operations, explicit signOut not needed as we're using service role
     } catch (error) {
       throw new AppError('Logout failed', 500, 'LOGOUT_ERROR', error);
     }

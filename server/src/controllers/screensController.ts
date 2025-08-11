@@ -4,23 +4,29 @@ import {
   DashboardData,
   ExpensesScreenData,
   AnalyticsData,
-  SettingsData,
+  GetCategories,
   ProcessReceiptResponse,
 } from '../types/database';
 import {
   getDashboardDataService,
   getExpensesDataService,
   getAnalyticsDataService,
-  getSettingsDataService,
+  getCategories,
   processReceiptImageService,
 } from '../services/screensService';
-import { ExpensesQueryData, AnalyticsQueryData, ProcessReceiptData } from '../utils/validation';
+import {
+  DashboardQueryData,
+  ExpensesQueryData,
+  AnalyticsQueryData,
+  ProcessReceiptData,
+} from '../utils/validation';
 
 // Get all dashboard data in one call
 export const getDashboardData = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
-    const data = await getDashboardDataService(userId);
+    const query = req.query as unknown as DashboardQueryData;
+    const data = await getDashboardDataService(userId, query);
 
     const response: ApiResponse<DashboardData> = {
       success: true,
@@ -94,12 +100,12 @@ export const getAnalyticsData = async (req: Request, res: Response): Promise<voi
 };
 
 // Get all settings data
-export const getSettingsData = async (req: Request, res: Response): Promise<void> => {
+export const getCategoriesData = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
-    const data = await getSettingsDataService(userId);
+    const data = await getCategories(userId);
 
-    const response: ApiResponse<SettingsData> = {
+    const response: ApiResponse<GetCategories> = {
       success: true,
       message: 'Settings data retrieved successfully',
       data,

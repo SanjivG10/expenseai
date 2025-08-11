@@ -138,10 +138,8 @@ export interface AnalyticsData {
   };
 }
 
-export interface SettingsData {
-  user_profile: any; // Will use Supabase User type
-  categories: CategoryWithStats[];
-  preferences: UserPreferences;
+export interface GetCategories {
+  categories: Category[];
 }
 
 export interface ProcessReceiptResponse {

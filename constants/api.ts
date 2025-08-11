@@ -21,8 +21,8 @@ export const API_ENDPOINTS = {
   SCREEN_DASHBOARD: '/screens/dashboard',
   SCREEN_EXPENSES: '/screens/expenses',
   SCREEN_ANALYTICS: '/screens/analytics',
-  SCREEN_SETTINGS: '/screens/settings',
   SCREEN_CAMERA_PROCESS: '/screens/camera/process-receipt',
+  SCREEN_CATEGORIES: '/screens/categories',
 
   // Individual CRUD operations
   EXPENSES: '/expenses',

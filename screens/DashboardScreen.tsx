@@ -7,27 +7,34 @@ import AddExpenseScreen from './AddExpenseScreen';
 import CalendarView from '../components/CalendarView';
 import { format } from 'date-fns';
 import { apiService } from '../services/api';
-import { DashboardResponse, RecentExpense } from '../types/api';
+import { DashboardScreenResponse, RecentExpense, DashboardScreenQuery } from '../types';
 import { ROUTES } from '../constants/urls';
 import LoadingScreen from '../components/LoadingScreen';
 
 export default function DashboardScreen() {
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showCalendarView, setShowCalendarView] = useState(false);
-  const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardScreenResponse['data'] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const navigation = useNavigation();
 
-  const currentMonthName = format(new Date(), 'MMMM yyyy');
+  const currentMonthName = format(selectedDate, 'MMMM yyyy');
 
   // Fetch dashboard data from API
-  const fetchDashboardData = async (isRefresh = false) => {
+  const fetchDashboardData = async (isRefresh = false, targetDate?: Date) => {
     try {
       if (isRefresh) setIsRefreshing(true);
       else setIsLoading(true);
 
-      const response = await apiService.getDashboardData();
+      const dateToUse = targetDate || selectedDate;
+      const query: DashboardScreenQuery = {
+        month: dateToUse.getMonth() + 1, // Convert 0-11 to 1-12
+        year: dateToUse.getFullYear()
+      };
+
+      const response = await apiService.getDashboardData(query);
 
       if (response.success) {
         console.log('Dashboard data:', response.data);
@@ -46,14 +53,20 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [selectedDate]);
 
   const handleRefresh = () => {
     fetchDashboardData(true);
   };
 
-  const handleCalendarDaySelect = () => {
-    // Calendar day selection handled within CalendarView component
+  const handleCalendarDaySelect = (date: Date) => {
+    setSelectedDate(date);
+    // Data will be fetched automatically due to useEffect dependency
+  };
+
+  const handleMonthChange = (date: Date) => {
+    setSelectedDate(date);
+    // Data will be fetched automatically due to useEffect dependency
   };
 
   const handleViewAllExpenses = () => {
@@ -61,7 +74,7 @@ export default function DashboardScreen() {
     navigation.navigate(ROUTES.EXPENSES as never);
   };
 
-  const handleAddExpense = (expense: any) => {
+  const handleAddExpense = () => {
     // After adding expense, refresh dashboard data
     fetchDashboardData(true);
   };
@@ -108,7 +121,12 @@ export default function DashboardScreen() {
         {/* Calendar View */}
         {showCalendarView && (
           <View className="mx-6 mt-6">
-            <CalendarView onDaySelect={handleCalendarDaySelect} />
+            <CalendarView 
+              onDaySelect={handleCalendarDaySelect}
+              onMonthChange={handleMonthChange}
+              calendarData={dashboardData?.calendar_data || {}}
+              selectedDate={selectedDate}
+            />
           </View>
         )}
         {/* Monthly Overview Card */}

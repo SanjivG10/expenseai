@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { errorHandler, notFoundHandler, handleUncaughtExceptions } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimiter';
+import { requestResponseLogger } from './middleware/responseLogger';
 import authRoutes from './routes/auth';
 import screenRoutes from './routes/screens';
 import expenseRoutes from './routes/expenses';
@@ -50,15 +51,14 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Endpoint logging middleware
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`);
-  next();
-});
-
-// Logging middleware
+// Enhanced request/response logging middleware
 if (env.NODE_ENV !== 'test') {
-  app.use(morgan(env.NODE_ENV === 'development' ? 'dev' : 'combined'));
+  app.use(requestResponseLogger);
+  
+  // Keep Morgan for additional HTTP logging in production
+  if (env.NODE_ENV === 'production') {
+    app.use(morgan('combined'));
+  }
 }
 
 // Rate limiting

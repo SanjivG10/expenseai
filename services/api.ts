@@ -1,25 +1,25 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, API_ENDPOINTS, buildApiUrl } from '../constants/api';
-import { ENV } from 'constants/envs';
 import {
-  ApiResponse,
+  AnalyticsScreenQuery,
+  AnalyticsScreenResponse,
   ApiError,
-  DashboardResponse,
-  ExpensesResponse,
-  ExpensesQuery,
-  AnalyticsResponse,
-  AnalyticsQuery,
-  SettingsResponse,
-  ProcessReceiptRequest,
-  ProcessReceiptResponse,
-  Expense,
-  CreateExpenseRequest,
-  UpdateExpenseRequest,
+  ApiResponse,
   Category,
   CreateCategoryRequest,
+  CreateExpenseRequest,
+  DashboardScreenQuery,
+  DashboardScreenResponse,
+  Expense,
+  ExpensesScreenQuery,
+  ExpensesScreenResponse,
+  GetCategories,
+  ProcessReceiptRequest,
+  ProcessReceiptResponse,
   UpdateCategoryRequest,
+  UpdateExpenseRequest,
   UpdateProfileRequest,
-} from '../types/api';
+} from '../types';
 
 const url = buildApiUrl(API_ENDPOINTS.AUTH_SIGNUP);
 console.log({ url, baseURL: API_CONFIG.BASE_URL });
@@ -150,24 +150,36 @@ class ApiService {
   }
 
   // Screen-centric endpoints
-  async getDashboardData(): Promise<ApiResponse<DashboardResponse>> {
-    return this.get(API_ENDPOINTS.SCREEN_DASHBOARD, true);
-  }
-
-  async getExpensesData(query?: ExpensesQuery): Promise<ApiResponse<ExpensesResponse>> {
+  async getDashboardData(
+    query?: DashboardScreenQuery
+  ): Promise<ApiResponse<DashboardScreenResponse>> {
     const queryString = query ? new URLSearchParams(query as any).toString() : '';
-    const endpoint = queryString ? `${API_ENDPOINTS.SCREEN_EXPENSES}?${queryString}` : API_ENDPOINTS.SCREEN_EXPENSES;
+    const endpoint = queryString
+      ? `${API_ENDPOINTS.SCREEN_DASHBOARD}?${queryString}`
+      : API_ENDPOINTS.SCREEN_DASHBOARD;
     return this.get(endpoint, true);
   }
 
-  async getAnalyticsData(query?: AnalyticsQuery): Promise<ApiResponse<AnalyticsResponse>> {
+  async getExpensesData(query?: ExpensesScreenQuery): Promise<ApiResponse<ExpensesScreenResponse>> {
     const queryString = query ? new URLSearchParams(query as any).toString() : '';
-    const endpoint = queryString ? `${API_ENDPOINTS.SCREEN_ANALYTICS}?${queryString}` : API_ENDPOINTS.SCREEN_ANALYTICS;
+    const endpoint = queryString
+      ? `${API_ENDPOINTS.SCREEN_EXPENSES}?${queryString}`
+      : API_ENDPOINTS.SCREEN_EXPENSES;
     return this.get(endpoint, true);
   }
 
-  async getSettingsData(): Promise<ApiResponse<SettingsResponse>> {
-    return this.get(API_ENDPOINTS.SCREEN_SETTINGS, true);
+  async getAnalyticsData(
+    query?: AnalyticsScreenQuery
+  ): Promise<ApiResponse<AnalyticsScreenResponse>> {
+    const queryString = query ? new URLSearchParams(query as any).toString() : '';
+    const endpoint = queryString
+      ? `${API_ENDPOINTS.SCREEN_ANALYTICS}?${queryString}`
+      : API_ENDPOINTS.SCREEN_ANALYTICS;
+    return this.get(endpoint, true);
+  }
+
+  async getCategories(): Promise<ApiResponse<GetCategories>> {
+    return this.get(API_ENDPOINTS.SCREEN_CATEGORIES, true);
   }
 
   async processReceipt(data: ProcessReceiptRequest): Promise<ApiResponse<ProcessReceiptResponse>> {

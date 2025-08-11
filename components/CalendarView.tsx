@@ -10,36 +10,42 @@ import {
   addMonths,
   subMonths,
 } from 'date-fns';
-import { useExpenseStore, Expense } from '../store/expenseStore';
+import { CalendarExpense } from '../types/api';
 
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
 interface CalendarViewProps {
-  onDaySelect: (date: Date, expenses: Expense[]) => void;
+  onDaySelect: (date: Date) => void;
+  onMonthChange: (date: Date) => void;
+  calendarData: Record<string, CalendarExpense[]>;
+  selectedDate: Date;
 }
 
-export default function CalendarView({ onDaySelect }: CalendarViewProps) {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const { expenses, categories } = useExpenseStore();
+export default function CalendarView({ onDaySelect, onMonthChange, calendarData, selectedDate }: CalendarViewProps) {
+  const [currentDate, setCurrentDate] = useState(selectedDate || new Date());
+  const [localSelectedDate, setLocalSelectedDate] = useState<Date | null>(selectedDate);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
   const previousMonth = () => {
-    setCurrentDate(subMonths(currentDate, 1));
-    setSelectedDate(null);
+    const newDate = subMonths(currentDate, 1);
+    setCurrentDate(newDate);
+    setLocalSelectedDate(null);
+    onMonthChange(newDate);
   };
 
   const nextMonth = () => {
-    setCurrentDate(addMonths(currentDate, 1));
-    setSelectedDate(null);
+    const newDate = addMonths(currentDate, 1);
+    setCurrentDate(newDate);
+    setLocalSelectedDate(null);
+    onMonthChange(newDate);
   };
 
-  const getExpensesForDate = (date: Date): Expense[] => {
+  const getExpensesForDate = (date: Date): CalendarExpense[] => {
     const dateString = format(date, 'yyyy-MM-dd');
-    return expenses.filter((expense) => expense.date === dateString);
+    return calendarData[dateString] || [];
   };
 
   const getTotalForDate = (date: Date): number => {
@@ -48,14 +54,11 @@ export default function CalendarView({ onDaySelect }: CalendarViewProps) {
   };
 
   const handleDayPress = (date: Date) => {
-    setSelectedDate(date);
-    const dayExpenses = getExpensesForDate(date);
-    onDaySelect(date, dayExpenses);
+    setLocalSelectedDate(date);
+    onDaySelect(date);
   };
 
-  const getCategoryName = (categoryId: string) => {
-    return categories.find((cat) => cat.id === categoryId)?.name || categoryId;
-  };
+  // Remove category lookup since we have category names in calendar data
 
   // Calculate the starting day of the week for the first day of the month
   const firstDayOfMonth = monthStart.getDay();
@@ -96,7 +99,7 @@ export default function CalendarView({ onDaySelect }: CalendarViewProps) {
         {daysInMonth.map((date) => {
           const dayExpenses = getExpensesForDate(date);
           const total = getTotalForDate(date);
-          const isSelected = selectedDate && isSameDay(date, selectedDate);
+          const isSelected = localSelectedDate && isSameDay(date, localSelectedDate);
           const isToday = isSameDay(date, new Date());
 
           return (
@@ -139,19 +142,19 @@ export default function CalendarView({ onDaySelect }: CalendarViewProps) {
       </View>
 
       {/* Selected Date Info */}
-      {selectedDate && (
+      {localSelectedDate && (
         <View className="mt-4 border-t border-border pt-4">
           <Text className="mb-2 font-semibold text-foreground">
-            {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+            {format(localSelectedDate, 'EEEE, MMMM d, yyyy')}
           </Text>
-          {getExpensesForDate(selectedDate).length > 0 ? (
+          {getExpensesForDate(localSelectedDate).length > 0 ? (
             <ScrollView className="max-h-32">
-              {getExpensesForDate(selectedDate).map((expense) => (
+              {getExpensesForDate(localSelectedDate).map((expense) => (
                 <View key={expense.id} className="flex-row items-center justify-between py-1">
                   <View className="flex-1">
                     <Text className="text-sm text-foreground">{expense.description}</Text>
                     <Text className="text-xs text-muted-foreground">
-                      {getCategoryName(expense.category)}
+                      {expense.category_name}
                     </Text>
                   </View>
                   <Text className="text-sm font-medium text-foreground">
@@ -162,7 +165,7 @@ export default function CalendarView({ onDaySelect }: CalendarViewProps) {
               <View className="flex-row justify-between border-t border-border/50 pt-2">
                 <Text className="font-medium text-foreground">Total</Text>
                 <Text className="font-bold text-foreground">
-                  ${getTotalForDate(selectedDate).toFixed(2)}
+                  ${getTotalForDate(localSelectedDate).toFixed(2)}
                 </Text>
               </View>
             </ScrollView>

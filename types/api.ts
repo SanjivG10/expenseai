@@ -34,7 +34,7 @@ export interface CreateExpenseRequest {
   category: string;
   date: string;
   notes?: string;
-  receiptImage?: string;
+  receiptImage?: string | null;
 }
 
 export interface UpdateExpenseRequest extends Partial<CreateExpenseRequest> {}
@@ -184,6 +184,12 @@ export interface CategoryBreakdown {
 
 export interface AnalyticsQuery {
   period?: 'week' | 'month' | 'year';
+}
+
+// Dashboard query parameters
+export interface DashboardQuery {
+  month?: number; // 1-12
+  year?: number; // e.g., 2024
 }
 
 // Settings Screen Response

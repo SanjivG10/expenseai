@@ -72,11 +72,16 @@ export const updateProfileSchema = z.object({
 });
 
 // Screen endpoint query schemas
+export const dashboardQuerySchema = z.object({
+  month: z.coerce.number().min(1).max(12).optional(),
+  year: z.coerce.number().min(2020).max(2030).optional(),
+});
+
 export const expensesQuerySchema = z.object({
   page: z.coerce.number().min(1).default(1),
   limit: z.coerce.number().min(1).max(100).default(20),
   search: z.string().optional(),
-  category: z.string().uuid().optional(),
+  category: z.string().optional(),
   start_date: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)')
@@ -97,7 +102,7 @@ export const analyticsQuerySchema = z.object({
 export const createExpenseSchema = z.object({
   amount: z.number().min(0.01, 'Amount must be greater than 0'),
   description: z.string().min(1, 'Description is required').max(255, 'Description too long'),
-  category_id: z.string().uuid('Invalid category ID'),
+  category_id: z.string().min(1, 'Category ID is required'),
   expense_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
   notes: z.string().max(1000, 'Notes too long').optional(),
   receipt_image: z.string().optional(), // base64 string
@@ -110,7 +115,7 @@ export const updateExpenseSchema = z.object({
     .min(1, 'Description is required')
     .max(255, 'Description too long')
     .optional(),
-  category_id: z.string().uuid('Invalid category ID').optional(),
+  category_id: z.string().min(1, 'Category ID is required').optional(),
   expense_date: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)')
@@ -140,17 +145,63 @@ export const processReceiptSchema = z.object({
   image: z.string().min(1, 'Image is required'), // base64 encoded image
 });
 
-// Generic validation helper
+// Enhanced validation helper with detailed error information
 export function validateSchema<T>(schema: z.ZodSchema<T>, data: unknown): T {
   try {
     return schema.parse(data);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const message = error.errors.map((err) => `${err.path.join('.')}: ${err.message}`).join(', ');
-      throw new Error(`Validation failed: ${message}`);
+      // Create detailed error information
+      const errorDetails = {
+        validationErrors: error.errors.map((err) => ({
+          field: err.path.join('.') || 'root',
+          message: err.message,
+          code: err.code,
+        })),
+        receivedData: data,
+        errorCount: error.errors.length,
+      };
+
+      // Create a readable error message
+      const message = error.errors
+        .map((err) => `${err.path.join('.') || 'root'}: ${err.message}`)
+        .join(', ');
+
+      // Create enhanced error with details
+      const validationError = new Error(`Validation failed: ${message}`);
+      (validationError as any).details = errorDetails;
+      (validationError as any).code = 'VALIDATION_ERROR';
+
+      throw validationError;
     }
     throw error;
   }
+}
+
+// Validation middleware factory for Express routes
+export function validationMiddleware<T>(schema: z.ZodSchema<T>) {
+  return (req: any, res: any, next: any) => {
+    try {
+      // Validate request body
+      const validatedData = validateSchema(schema, req.body);
+      req.validatedBody = validatedData;
+      next();
+    } catch (error: any) {
+      console.error('🚫 [VALIDATION ERROR]', {
+        endpoint: `${req.method} ${req.originalUrl}`,
+        error: error.message,
+        details: error.details,
+        timestamp: new Date().toISOString(),
+      });
+
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+        error: error.details || error.message,
+        code: error.code || 'VALIDATION_ERROR',
+      });
+    }
+  };
 }
 
 // Type exports
@@ -161,6 +212,7 @@ export type VerifyOTPData = z.infer<typeof verifyOTPSchema>;
 export type ResetPasswordData = z.infer<typeof resetPasswordSchema>;
 export type RefreshTokenData = z.infer<typeof refreshTokenSchema>;
 export type UpdateProfileData = z.infer<typeof updateProfileSchema>;
+export type DashboardQueryData = z.infer<typeof dashboardQuerySchema>;
 export type ExpensesQueryData = z.infer<typeof expensesQuerySchema>;
 export type AnalyticsQueryData = z.infer<typeof analyticsQuerySchema>;
 export type CreateExpenseData = z.infer<typeof createExpenseSchema>;

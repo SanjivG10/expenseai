@@ -125,25 +125,12 @@ export default function ExpensesScreen() {
     );
   };
 
-  const handleUpdateExpense = async (updatedExpense: any) => {
-    if (editingExpense) {
-      try {
-        await apiService.updateExpense(editingExpense.id, {
-          amount: updatedExpense.amount,
-          description: updatedExpense.description,
-          category_id: updatedExpense.category_id,
-          expense_date: updatedExpense.expense_date,
-          notes: updatedExpense.notes,
-        });
-        fetchExpensesData(true); // Refresh the list
-        setEditingExpense(null);
-        setShowEditModal(false);
-        Alert.alert('Success', 'Expense updated successfully');
-      } catch (error) {
-        console.error('Update error:', error);
-        Alert.alert('Error', 'Failed to update expense');
-      }
-    }
+  const handleUpdateExpense = () => {
+    // Expense has been updated, refresh the list and clean up UI
+    fetchExpensesData(true);
+    setEditingExpense(null);
+    setShowEditModal(false);
+    // The AddExpenseScreen already shows success toast
   };
 
   const handleLoadMore = () => {

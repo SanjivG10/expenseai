@@ -1,5 +1,5 @@
 import { addDays, endOfMonth, format, startOfMonth, subMonths } from 'date-fns';
-import { supabase } from '../config/supabase';
+import { supabaseAdmin } from '../config/supabase';
 import {
   AnalyticsData,
   CalendarData,
@@ -11,18 +11,26 @@ import {
   MonthlyStats,
   ProcessReceiptResponse,
   RecentExpense,
-  SettingsData,
+  GetCategories,
 } from '../types/database';
-import { AnalyticsQueryData, ExpensesQueryData } from '../utils/validation';
+import { DashboardQueryData, AnalyticsQueryData, ExpensesQueryData } from '../utils/validation';
 
 // Get dashboard data (monthly stats, recent expenses, calendar)
-export const getDashboardDataService = async (userId: string): Promise<DashboardData> => {
-  const currentDate = new Date();
-  const startOfCurrentMonth = startOfMonth(currentDate);
-  const endOfCurrentMonth = endOfMonth(currentDate);
+export const getDashboardDataService = async (
+  userId: string,
+  query?: DashboardQueryData
+): Promise<DashboardData> => {
+  // Use provided month/year or default to current
+  const targetDate = new Date(
+    query?.year ?? new Date().getFullYear(),
+    (query?.month ?? new Date().getMonth() + 1) - 1, // Convert 1-12 to 0-11
+    1
+  );
+  const startOfCurrentMonth = startOfMonth(targetDate);
+  const endOfCurrentMonth = endOfMonth(targetDate);
 
   // Get monthly stats
-  const { data: monthlyExpenses, error: monthlyError } = await supabase
+  const { data: monthlyExpenses, error: monthlyError } = await supabaseAdmin
     .from('expenses')
     .select('amount')
     .eq('user_id', userId)
@@ -38,7 +46,7 @@ export const getDashboardDataService = async (userId: string): Promise<Dashboard
   const avgDaily = expenseCount > 0 ? totalAmount / daysInMonth : 0;
 
   // Get categories count
-  const { count: categoriesCount, error: categoriesError } = await supabase
+  const { count: categoriesCount, error: categoriesError } = await supabaseAdmin
     .from('categories')
     .select('id', { count: 'exact' })
     .eq('user_id', userId);
@@ -53,7 +61,7 @@ export const getDashboardDataService = async (userId: string): Promise<Dashboard
   };
 
   // Get recent expenses (last 5)
-  const { data: recentExpensesData, error: recentError } = await supabase
+  const { data: recentExpensesData, error: recentError } = await supabaseAdmin
     .from('expenses')
     .select(
       `
@@ -85,7 +93,7 @@ export const getDashboardDataService = async (userId: string): Promise<Dashboard
   }));
 
   // Get calendar data for current month
-  const { data: calendarExpensesData, error: calendarError } = await supabase
+  const { data: calendarExpensesData, error: calendarError } = await supabaseAdmin
     .from('expenses')
     .select(
       `
@@ -138,7 +146,7 @@ export const getExpensesDataService = async (
   const offset = (page - 1) * limit;
 
   // Build query with filters
-  let expensesQuery = supabase
+  let expensesQuery = supabaseAdmin
     .from('expenses')
     .select(
       `
@@ -189,7 +197,7 @@ export const getExpensesDataService = async (
   if (expensesError) throw new Error('Failed to fetch expenses');
 
   // Get all categories for filter dropdown
-  const { data: categoriesData, error: categoriesError } = await supabase
+  const { data: categoriesData, error: categoriesError } = await supabaseAdmin
     .from('categories')
     .select('id, name, icon, color')
     .eq('user_id', userId)
@@ -263,7 +271,7 @@ export const getAnalyticsDataService = async (
   }
 
   // Get current period expenses
-  const { data: currentExpenses, error: currentError } = await supabase
+  const { data: currentExpenses, error: currentError } = await supabaseAdmin
     .from('expenses')
     .select('amount, expense_date, category_id, categories(name, icon, color)')
     .eq('user_id', userId)
@@ -287,7 +295,7 @@ export const getAnalyticsDataService = async (
         ? addDays(endDate, -7)
         : new Date(currentDate.getFullYear() - 1, 11, 31);
 
-  const { data: prevExpenses, error: prevError } = await supabase
+  const { data: prevExpenses, error: prevError } = await supabaseAdmin
     .from('expenses')
     .select('amount')
     .eq('user_id', userId)
@@ -308,7 +316,7 @@ export const getAnalyticsDataService = async (
   const avgDaily = currentTotal / daysInPeriod;
 
   // Get categories
-  const { data: categories, error: catError } = await supabase
+  const { data: categories, error: catError } = await supabaseAdmin
     .from('categories')
     .select('id, name')
     .eq('user_id', userId);
@@ -365,19 +373,13 @@ export const getAnalyticsDataService = async (
 };
 
 // Get settings data
-export const getSettingsDataService = async (userId: string): Promise<SettingsData> => {
-  // Get user profile from Supabase Auth
-  const { data: { user }, error: profileError } = await supabase.auth.getUser();
-
-  if (profileError || !user) throw new Error('Failed to fetch user profile');
-
+export const getCategories = async (userId: string): Promise<GetCategories> => {
   // Get categories with expense counts
-  const { data: categoriesData, error: categoriesError } = await supabase
+  const { data: categoriesData, error: categoriesError } = await supabaseAdmin
     .from('categories')
     .select(
       `
-      *,
-      expenses(count)
+      *
     `
     )
     .eq('user_id', userId)
@@ -385,38 +387,8 @@ export const getSettingsDataService = async (userId: string): Promise<SettingsDa
 
   if (categoriesError) throw new Error('Failed to fetch categories');
 
-  // Get user preferences
-  const { data: preferences, error: preferencesError } = await supabase
-    .from('user_preferences')
-    .select('*')
-    .eq('user_id', userId)
-    .single();
-
-  // If no preferences exist, create default ones
-  let userPreferences = preferences;
-  if (preferencesError || !preferences) {
-    const { data: defaultPrefs, error: createError } = await supabase
-      .from('user_preferences')
-      .insert({
-        user_id: userId,
-        budget_enabled: false,
-        export_format: 'CSV',
-        theme: 'dark',
-      })
-      .select()
-      .single();
-
-    if (createError) throw new Error('Failed to create user preferences');
-    userPreferences = defaultPrefs;
-  }
-
   return {
-    user_profile: user,
-    categories: categoriesData.map((cat) => ({
-      ...cat,
-      expense_count: cat.expenses?.[0]?.count || 0,
-    })),
-    preferences: userPreferences,
+    categories: categoriesData,
   };
 };
 
@@ -433,7 +405,7 @@ export const processReceiptImageService = async (
   // 4. Return structured data
 
   // Get user categories for the response
-  const { data } = await supabase
+  const { data } = await supabaseAdmin
     .from('categories')
     .select('id, name, icon, color')
     .eq('user_id', userId)

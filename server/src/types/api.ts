@@ -10,7 +10,7 @@ export interface ApiResponse<T = any> {
 export interface ApiError {
   success: false;
   message: string;
-  error: string;
+  error: string | object; // Allow both string and detailed error objects
   status: number;
 }
 

@@ -107,17 +107,11 @@ export default function CameraScreen() {
     }
   };
 
-  const handleExpenseSave = async (expense: any) => {
-    try {
-      // Create expense using API
-      await apiService.createExpense(expense);
-      setShowAddExpense(false);
-      setProcessedData(null);
-      Alert.alert('Success', 'Expense added successfully!');
-    } catch (error) {
-      console.error('Error saving expense:', error);
-      Alert.alert('Error', 'Failed to save expense');
-    }
+  const handleExpenseSave = () => {
+    // Expense has been saved, just clean up UI state
+    setShowAddExpense(false);
+    setProcessedData(null);
+    // The AddExpenseScreen already shows success toast
   };
 
   return (

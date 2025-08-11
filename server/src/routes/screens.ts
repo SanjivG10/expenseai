@@ -1,14 +1,19 @@
 import { Router } from 'express';
-import { auth } from '../middleware/auth';
-import { validate } from '../middleware/validation';
-import { 
+import {
+  getAnalyticsData,
+  getCategoriesData,
   getDashboardData,
   getExpensesData,
-  getAnalyticsData,
-  getSettingsData,
-  processReceiptImage
+  processReceiptImage,
 } from '../controllers/screensController';
-import { analyticsQuerySchema, expensesQuerySchema, processReceiptSchema } from '../utils/validation';
+import { auth } from '../middleware/auth';
+import { validate } from '../middleware/validation';
+import {
+  analyticsQuerySchema,
+  dashboardQuerySchema,
+  expensesQuerySchema,
+  processReceiptSchema,
+} from '../utils/validation';
 
 const router = Router();
 
@@ -16,10 +21,10 @@ const router = Router();
 router.use(auth);
 
 // Screen-centric endpoints
-router.get('/dashboard', getDashboardData);
+router.get('/dashboard', validate(dashboardQuerySchema, 'query'), getDashboardData);
 router.get('/expenses', validate(expensesQuerySchema, 'query'), getExpensesData);
 router.get('/analytics', validate(analyticsQuerySchema, 'query'), getAnalyticsData);
-router.get('/settings', getSettingsData);
+router.get('/categories', getCategoriesData);
 router.post('/camera/process-receipt', validate(processReceiptSchema, 'body'), processReceiptImage);
 
 export default router;

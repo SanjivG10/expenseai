@@ -43,7 +43,6 @@ export default function AppNavigator() {
     return (
       <SubscriptionScreen
         onComplete={() => setShowSubscriptionScreen(false)}
-        onSkip={() => setShowSubscriptionScreen(false)}
         showSkipOption={true}
       />
     );

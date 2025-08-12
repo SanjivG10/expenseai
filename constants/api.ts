@@ -54,6 +54,7 @@ export const API_ENDPOINTS = {
   SUBSCRIPTION_CREATE: '/subscriptions/create',
   SUBSCRIPTION_CANCEL: '/subscriptions/cancel',
   SUBSCRIPTION_UPDATE_PAYMENT_METHOD: '/subscriptions/update-payment-method',
+  SUBSCRIPTION_BILLING_HISTORY: '/subscriptions/billing-history',
   PAYMENT_INTENT_CREATE: '/payments/create-intent',
 } as const;
 

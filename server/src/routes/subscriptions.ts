@@ -12,5 +12,6 @@ router.post('/create', subscriptionController.createSubscription.bind(subscripti
 router.get('/', subscriptionController.getUserSubscription.bind(subscriptionController));
 router.post('/cancel', subscriptionController.cancelSubscription.bind(subscriptionController));
 router.post('/update-payment-method', subscriptionController.updatePaymentMethod.bind(subscriptionController));
+router.get('/billing-history', subscriptionController.getBillingHistory.bind(subscriptionController));
 
 export default router;

@@ -285,6 +285,9 @@ class ApiService {
   async updatePaymentMethod(data: any): Promise<ApiResponse<any>> {
     return this.post(API_ENDPOINTS.SUBSCRIPTION_UPDATE_PAYMENT_METHOD, data, true);
   }
+  async getBillingHistory(): Promise<ApiResponse<any[]>> {
+    return this.get(API_ENDPOINTS.SUBSCRIPTION_BILLING_HISTORY, true);
+  }
 
   async createPaymentIntent(data: any): Promise<ApiResponse<any>> {
     return this.post(API_ENDPOINTS.PAYMENT_INTENT_CREATE, data, true);

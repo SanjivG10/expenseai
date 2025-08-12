@@ -213,6 +213,36 @@ export class SubscriptionController {
   }
 
   /**
+   * Get billing history for user
+   */
+  async getBillingHistory(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'User not authenticated',
+        });
+        return;
+      }
+
+      const billingHistory = await stripeService.getBillingHistory(userId);
+
+      res.json({
+        success: true,
+        message: 'Billing history retrieved successfully',
+        data: billingHistory,
+      });
+    } catch (error) {
+      console.error('Get billing history error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get billing history',
+      });
+    }
+  }
+
+  /**
    * Handle Stripe webhooks
    */
   async handleStripeWebhook(req: Request, res: Response): Promise<void> {

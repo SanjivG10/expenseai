@@ -463,6 +463,40 @@ export class StripeService {
   }
 
   /**
+   * Get billing history for user
+   */
+  async getBillingHistory(userId: string): Promise<any[]> {
+    try {
+      const subscription = await this.getUserSubscription(userId);
+      if (!subscription) {
+        return [];
+      }
+
+      // Get invoices from Stripe for this customer
+      const invoices = await stripe.invoices.list({
+        customer: subscription.stripe_customer_id,
+        limit: 12, // Last 12 invoices
+        status: 'paid',
+      });
+
+      return invoices.data.map(invoice => ({
+        id: invoice.id,
+        amount: invoice.amount_paid,
+        currency: invoice.currency,
+        status: invoice.status,
+        created: invoice.created,
+        plan: subscription.plan,
+        period_start: invoice.period_start,
+        period_end: invoice.period_end,
+        invoice_url: invoice.hosted_invoice_url,
+      }));
+    } catch (error) {
+      console.error('Failed to get billing history:', error);
+      return [];
+    }
+  }
+
+  /**
    * Sync subscription status from Stripe (fallback method)
    */
   async syncSubscriptionStatus(userId: string): Promise<UserSubscription | null> {

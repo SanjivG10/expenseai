@@ -4,6 +4,7 @@ import * as Notifications from 'expo-notifications';
 import { Alert, Linking } from 'react-native';
 import { apiService } from './api';
 import { detectUserTimezone } from '../types/preferences';
+import Toast from 'react-native-toast-message';
 
 // Storage keys
 export const NOTIFICATION_PERMISSION_KEY = '@expense_ai_notification_permission';
@@ -297,19 +298,9 @@ class UnifiedNotificationService {
 
     // Handle user interaction with notifications
     Notifications.addNotificationResponseReceivedListener((response) => {
-      console.log('User interacted with notification:', response);
-
-      const data = response.notification.request.content.data;
-
-      // Handle different notification types
-      if (data?.type === 'daily_budget') {
-        console.log('Daily budget notification tapped');
-        // Could navigate to budget screen
-      } else if (data?.type === 'weekly_budget') {
-        console.log('Weekly budget notification tapped');
-      } else if (data?.type === 'monthly_budget') {
-        console.log('Monthly budget notification tapped');
-      }
+      Toast.show({
+        text1: 'Check your budget',
+      });
     });
   }
 

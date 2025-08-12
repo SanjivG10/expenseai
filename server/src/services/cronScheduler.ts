@@ -3,12 +3,14 @@ import { pushNotificationService } from './pushNotificationService';
 
 export class CronScheduler {
   private notificationJob?: cron.ScheduledTask | null;
+  private cleanupJob?: cron.ScheduledTask | null;
 
   // Start timezone-aware notification system
   start(): void {
     console.log('Starting timezone-aware notification cron jobs...');
 
     this.startNotificationCheck();
+    this.startCleanupJob();
 
     console.log('Timezone-aware notification system started successfully');
   }
@@ -20,6 +22,11 @@ export class CronScheduler {
     if (this.notificationJob) {
       this.notificationJob.stop();
       this.notificationJob = null;
+    }
+
+    if (this.cleanupJob) {
+      this.cleanupJob.stop();
+      this.cleanupJob = null;
     }
 
     console.log('All notification cron jobs stopped');
@@ -43,6 +50,26 @@ export class CronScheduler {
     );
 
     console.log('Notification check scheduled every 15 minutes');
+  }
+
+  // Run cleanup job daily at 2 AM UTC
+  private startCleanupJob(): void {
+    this.cleanupJob = cron.schedule(
+      '0 2 * * *', // Daily at 2 AM UTC
+      async () => {
+        console.log('Running notification logs cleanup...');
+        try {
+          await pushNotificationService.cleanupOldNotificationLogs();
+        } catch (error) {
+          console.error('Cleanup job failed:', error);
+        }
+      },
+      {
+        timezone: 'UTC',
+      }
+    );
+
+    console.log('Notification logs cleanup scheduled daily at 2 AM UTC');
   }
 
   // Check all timezones and send notifications if needed

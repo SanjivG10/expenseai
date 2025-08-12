@@ -95,3 +95,18 @@ CREATE TRIGGER update_categories_updated_at
 CREATE TRIGGER update_expenses_updated_at 
   BEFORE UPDATE ON expenses 
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Notification logs to prevent duplicate notifications after server restarts
+CREATE TABLE IF NOT EXISTS notification_logs (
+  id SERIAL PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  notification_type VARCHAR(20) NOT NULL CHECK (notification_type IN ('daily', 'weekly', 'monthly')),
+  sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  timezone VARCHAR(50),
+  notification_time INTEGER, -- minutes since midnight
+  UNIQUE(user_id, notification_type, DATE(sent_at))
+);
+
+-- Index for efficient queries
+CREATE INDEX IF NOT EXISTS idx_notification_logs_user_date ON notification_logs(user_id, notification_type, DATE(sent_at));
+CREATE INDEX IF NOT EXISTS idx_notification_logs_sent_at ON notification_logs(sent_at);

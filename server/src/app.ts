@@ -11,6 +11,7 @@ import notificationRoutes from './routes/notifications';
 import preferencesRoutes from './routes/preferences';
 import screenRoutes from './routes/screens';
 import { cronScheduler } from './services/cronScheduler';
+import { PushNotificationService } from './services/pushNotificationService';
 
 // Handle uncaught exceptions
 handleUncaughtExceptions();
@@ -131,5 +132,14 @@ process.on('SIGINT', () => {
     process.exit(0);
   });
 });
+
+(async () => {
+  const notificationService = new PushNotificationService();
+  await notificationService.sendNotificationToUser(
+    'ExponentPushToken[cWPeG_Ow99ug1SWKOlkOnN]',
+    'Yoooo',
+    'This is a test notification'
+  );
+})();
 
 export default app;

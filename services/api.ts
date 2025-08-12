@@ -242,8 +242,18 @@ class ApiService {
     return this.get(API_ENDPOINTS.PREFERENCES, true);
   }
 
-  async updateUserPreferences(data: UpdatePreferencesRequest): Promise<ApiResponse<UserPreferences>> {
+  async updateUserPreferences(
+    data: UpdatePreferencesRequest
+  ): Promise<ApiResponse<UserPreferences>> {
     return this.put(API_ENDPOINTS.PREFERENCES, data, true);
+  }
+
+  async getSpendingProgress(): Promise<ApiResponse<any>> {
+    return this.get(API_ENDPOINTS.PREFERENCES_SPENDING_PROGRESS, true);
+  }
+
+  async updatePushToken(pushToken: string): Promise<ApiResponse<any>> {
+    return this.post(API_ENDPOINTS.PREFERENCES_PUSH_TOKEN, { pushToken }, true);
   }
 
   // Notification testing methods

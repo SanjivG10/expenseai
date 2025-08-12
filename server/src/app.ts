@@ -10,6 +10,7 @@ import expenseRoutes from './routes/expenses';
 import notificationRoutes from './routes/notifications';
 import preferencesRoutes from './routes/preferences';
 import screenRoutes from './routes/screens';
+import { cronScheduler } from './services/cronScheduler';
 
 // Handle uncaught exceptions
 handleUncaughtExceptions();
@@ -106,11 +107,16 @@ const server = app.listen(PORT, () => {
   if (env.NODE_ENV === 'development') {
     console.log(`🔑 Auth endpoints: http://localhost:${PORT}/api/${env.API_VERSION}/auth`);
   }
+
+  // Start notification cron jobs
+  console.log('🕐 Starting notification scheduler...');
+  cronScheduler.start();
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('🛑 SIGTERM received, shutting down gracefully');
+  cronScheduler.stop();
   server.close(() => {
     console.log('✅ Process terminated');
     process.exit(0);
@@ -119,6 +125,7 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   console.log('🛑 SIGINT received, shutting down gracefully');
+  cronScheduler.stop();
   server.close(() => {
     console.log('✅ Process terminated');
     process.exit(0);

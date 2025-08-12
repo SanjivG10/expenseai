@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
@@ -7,7 +6,8 @@ import LoadingScreen, { InlineLoader } from '../components/LoadingScreen';
 import { apiService } from '../services/api';
 import { OnboardingRequest } from '../types';
 import Logo from 'components/Logo';
-import { NOTIFICATION_PREFERENCE_KEY } from './SettingsScreen';
+import { unifiedNotificationService } from '../services/unifiedNotificationService';
+import { detectUserTimezone } from '../types/preferences';
 
 // Storage key for notification preference (same as SettingsScreen)
 
@@ -67,6 +67,25 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
     }
   };
 
+  const handleNotificationToggle = async (value: boolean) => {
+    if (value) {
+      // Request permissions through unified service
+      const granted = await unifiedNotificationService.requestPermissions();
+      if (!granted) {
+        Alert.alert(
+          'Permission Required',
+          'Notifications help you stay on track with your budget. You can enable them later in Settings.',
+          [{ text: 'OK' }]
+        );
+        setNotificationsEnabled(false);
+        return;
+      }
+      setNotificationsEnabled(true);
+    } else {
+      setNotificationsEnabled(false);
+    }
+  };
+
   const handleComplete = async () => {
     try {
       setIsSubmitting(true);
@@ -82,13 +101,18 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
       const response = await apiService.completeOnboarding(onboardingData);
 
       if (response.success) {
-        try {
-          await AsyncStorage.setItem(
-            NOTIFICATION_PREFERENCE_KEY,
-            JSON.stringify(notificationsEnabled)
-          );
-        } catch (storageError) {
-          console.error('Failed to save notification preference to storage:', storageError);
+        // Set up notifications using unified service
+        if (notificationsEnabled) {
+          try {
+            const success = await unifiedNotificationService.setNotificationPreference(true);
+            if (success) {
+              console.log('Notifications configured successfully after onboarding');
+            } else {
+              console.warn('Failed to configure notifications after onboarding');
+            }
+          } catch (notificationError) {
+            console.error('Failed to configure notifications after onboarding:', notificationError);
+          }
         }
 
         Alert.alert(
@@ -226,7 +250,7 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
           <Text className="text-lg font-medium text-foreground">Enable Notifications</Text>
           <Switch
             value={notificationsEnabled}
-            onValueChange={setNotificationsEnabled}
+            onValueChange={handleNotificationToggle}
             trackColor={{ false: '#404040', true: '#FFFFFF' }}
             thumbColor={notificationsEnabled ? '#000000' : '#f4f3f4'}
           />

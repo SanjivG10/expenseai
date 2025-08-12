@@ -4,7 +4,7 @@ import { createContext, ReactNode, useContext, useEffect, useState } from 'react
 import Toast from 'react-native-toast-message';
 import { API_ENDPOINTS } from '../constants/api';
 import { apiService } from '../services/api';
-import { NOTIFICATION_PREFERENCE_KEY } from 'screens/SettingsScreen';
+import { unifiedNotificationService } from '../services/unifiedNotificationService';
 
 export interface User {
   id: string;
@@ -83,6 +83,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
           isLoading: false,
           isAuthenticated: true,
         });
+
+        // Setup push notifications for existing user
+        try {
+          await unifiedNotificationService.initialize();
+          unifiedNotificationService.setupNotificationHandling();
+        } catch (error) {
+          console.error('Failed to setup push notifications:', error);
+        }
       } else {
         setAuthState((prev) => ({
           ...prev,
@@ -126,6 +134,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isLoading: false,
         isAuthenticated: true,
       });
+
+      // Register for push notifications after successful login
+      try {
+        await unifiedNotificationService.refreshPushToken();
+        unifiedNotificationService.setupNotificationHandling();
+      } catch (error) {
+        console.error('Failed to register for push notifications:', error);
+      }
 
       Toast.show({
         type: 'success',
@@ -182,6 +198,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isAuthenticated: true,
       });
 
+      // Register for push notifications after successful signup
+      try {
+        await unifiedNotificationService.refreshPushToken();
+        unifiedNotificationService.setupNotificationHandling();
+      } catch (error) {
+        console.error('Failed to register for push notifications:', error);
+      }
+
       Toast.show({
         type: 'success',
         text1: 'Account Created!',
@@ -207,11 +231,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       await apiService.post(API_ENDPOINTS.AUTH_LOGOUT);
 
+      // Clean up notification service
+      await unifiedNotificationService.cleanup();
+
       await Promise.all([
         AsyncStorage.removeItem(STORAGE_KEYS.TOKEN),
         AsyncStorage.removeItem(STORAGE_KEYS.USER),
         AsyncStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN),
-        AsyncStorage.removeItem(NOTIFICATION_PREFERENCE_KEY),
       ]);
 
       setAuthState({

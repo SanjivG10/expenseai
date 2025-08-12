@@ -18,6 +18,7 @@ import LoadingScreen, { InlineLoader } from '../components/LoadingScreen';
 import { useAuth } from '../contexts/AuthContext';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import { apiService } from '../services/api';
+import { unifiedNotificationService } from '../services/unifiedNotificationService';
 import CategoriesScreen from './CategoriesScreen';
 import FAQScreen from './FAQScreen';
 import ProfileScreen from './ProfileScreen';
@@ -51,9 +52,9 @@ export default function SettingsScreen() {
 
   const loadNotificationPreference = async () => {
     try {
-      const stored = await AsyncStorage.getItem(NOTIFICATION_PREFERENCE_KEY);
-      const enabled = stored ? JSON.parse(stored) : false;
-      setNotificationsEnabled(enabled);
+      // Initialize unified notification service and get current state
+      const notificationState = await unifiedNotificationService.initialize();
+      setNotificationsEnabled(notificationState.isEnabled);
     } catch (error) {
       console.error('Failed to load notification preference:', error);
       setNotificationsEnabled(false);
@@ -78,19 +79,26 @@ export default function SettingsScreen() {
 
   const handleNotificationToggle = async (value: boolean) => {
     try {
-      await AsyncStorage.setItem(NOTIFICATION_PREFERENCE_KEY, JSON.stringify(value));
-      setNotificationsEnabled(value);
+      const success = await unifiedNotificationService.setNotificationPreference(value);
 
-      // Show feedback to user
-      Alert.alert(
-        value ? 'Notifications Enabled' : 'Notifications Disabled',
-        value
-          ? 'You will receive daily spending reminders'
-          : 'You will no longer receive spending reminders',
-        [{ text: 'OK' }]
-      );
+      if (success) {
+        setNotificationsEnabled(value);
+
+        // Show feedback to user
+        Alert.alert(
+          value ? 'Notifications Enabled' : 'Notifications Disabled',
+          value
+            ? 'You will receive budget reminders based on your settings'
+            : 'You will no longer receive spending reminders',
+          [{ text: 'OK' }]
+        );
+      } else {
+        setNotificationsEnabled(!value);
+      }
     } catch (error) {
-      console.error('Failed to save notification preference:', error);
+      console.error('Failed to update notification preference:', error);
+      // Revert the toggle
+      setNotificationsEnabled(!value);
       Alert.alert('Error', 'Failed to update notification preference');
     }
   };
@@ -127,6 +135,7 @@ export default function SettingsScreen() {
 
       if (response.success) {
         setShowBudgetModal(false);
+
         Toast.show({
           text1: 'Budget settings updated successfully',
           type: 'success',
@@ -184,15 +193,7 @@ export default function SettingsScreen() {
   // Notification testing handlers
   const testDailyNotification = async () => {
     try {
-      const response = await apiService.testDailyNotification();
-      if (response.success) {
-        Alert.alert(
-          '🌙 Daily Reminder (Test)',
-          '💰 You have $25.50 remaining in your daily budget of $50.00. Sleep well!'
-        );
-      } else {
-        Alert.alert('Error', 'Failed to trigger daily notification test');
-      }
+      await unifiedNotificationService.sendTestNotification('daily');
     } catch (error) {
       console.error('Daily notification test error:', error);
       Alert.alert('Error', 'Failed to test daily notification');
@@ -201,15 +202,7 @@ export default function SettingsScreen() {
 
   const testWeeklyNotification = async () => {
     try {
-      const response = await apiService.testWeeklyNotification();
-      if (response.success) {
-        Alert.alert(
-          '📊 Weekly Summary (Test)',
-          "🔶 Weekly spending: $180.75 of $300.00 (60%). You're doing great this week!"
-        );
-      } else {
-        Alert.alert('Error', 'Failed to trigger weekly notification test');
-      }
+      await unifiedNotificationService.sendTestNotification('weekly');
     } catch (error) {
       console.error('Weekly notification test error:', error);
       Alert.alert('Error', 'Failed to test weekly notification');
@@ -218,15 +211,7 @@ export default function SettingsScreen() {
 
   const testMonthlyNotification = async () => {
     try {
-      const response = await apiService.testMonthlyNotification();
-      if (response.success) {
-        Alert.alert(
-          '📈 Monthly Summary (Test)',
-          '💰 Monthly budget remaining: $450.25 of $1,500.00. Keep up the good work!'
-        );
-      } else {
-        Alert.alert('Error', 'Failed to trigger monthly notification test');
-      }
+      await unifiedNotificationService.sendTestNotification('monthly');
     } catch (error) {
       console.error('Monthly notification test error:', error);
       Alert.alert('Error', 'Failed to test monthly notification');

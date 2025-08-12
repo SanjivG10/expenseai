@@ -44,6 +44,10 @@ export const API_ENDPOINTS = {
   // Health check
   HEALTH: '/health',
   AUTH_HEALTH: '/auth/health',
+
+  // Push token
+  PREFERENCES_PUSH_TOKEN: '/preferences/push-token',
+  PREFERENCES_SPENDING_PROGRESS: '/preferences/spending-progress',
 } as const;
 
 // Helper function to build full API URLs

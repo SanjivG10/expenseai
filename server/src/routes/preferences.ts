@@ -5,6 +5,8 @@ import {
   completeOnboarding,
   getUserPreferences,
   updateUserPreferences,
+  getSpendingProgress,
+  updatePushToken,
 } from '../controllers/preferencesController';
 import { onboardingSchema, updatePreferencesSchema } from '../utils/validation';
 
@@ -19,5 +21,11 @@ router.post('/onboarding/complete', validate(onboardingSchema, 'body'), complete
 // User preferences CRUD
 router.get('/', getUserPreferences);
 router.put('/', validate(updatePreferencesSchema, 'body'), updateUserPreferences);
+
+// Spending progress for notifications
+router.get('/spending-progress', getSpendingProgress);
+
+// Push token management
+router.post('/push-token', updatePushToken);
 
 export default router;

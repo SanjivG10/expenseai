@@ -1,3 +1,4 @@
+import { addDays, endOfMonth, format, startOfMonth } from 'date-fns';
 import { Request, Response } from 'express';
 import { supabaseAdmin } from '../config/supabase';
 import { ApiResponse } from '../types/api';
@@ -258,6 +259,179 @@ export const updateUserPreferences = async (req: Request, res: Response): Promis
     const response: ApiResponse = {
       success: false,
       message: 'Failed to update preferences',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+
+    res.status(500).json(response);
+  }
+};
+
+// Get spending progress for notifications
+export const getSpendingProgress = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+
+    // Get user preferences including budget limits
+    const { data: userPrefs, error: prefsError } = await supabaseAdmin
+      .from('user_preferences')
+      .select('daily_budget, weekly_budget, monthly_budget')
+      .eq('user_id', userId)
+      .single();
+
+    if (prefsError || !userPrefs) {
+      const response: ApiResponse = {
+        success: false,
+        message: 'User preferences not found',
+        error: prefsError?.message || 'No preferences found',
+      };
+      res.status(404).json(response);
+      return;
+    }
+
+    const currentDate = new Date();
+    const currentDateStr = format(currentDate, 'yyyy-MM-dd');
+    const startOfCurrentMonth = startOfMonth(currentDate);
+    const endOfCurrentMonth = endOfMonth(currentDate);
+
+    // Get monthly expenses for calculations
+    const { data: monthlyExpenses, error: monthlyError } = await supabaseAdmin
+      .from('expenses')
+      .select('amount, expense_date')
+      .eq('user_id', userId)
+      .gte('expense_date', format(startOfCurrentMonth, 'yyyy-MM-dd'))
+      .lte('expense_date', format(endOfCurrentMonth, 'yyyy-MM-dd'));
+
+    if (monthlyError) {
+      const response: ApiResponse = {
+        success: false,
+        message: 'Failed to fetch expenses',
+        error: monthlyError.message,
+      };
+      res.status(500).json(response);
+      return;
+    }
+
+    const expenses = monthlyExpenses || [];
+
+    // Calculate daily spending (today only)
+    const todayExpenses = expenses.filter((exp) => exp.expense_date === currentDateStr);
+    const dailySpent = todayExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
+
+    // Calculate weekly spending (current week - Sunday to Saturday)
+    const weekStart = format(addDays(currentDate, -currentDate.getDay()), 'yyyy-MM-dd');
+    const weekExpenses = expenses.filter((exp) => exp.expense_date >= weekStart);
+    const weeklySpent = weekExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
+
+    // Calculate monthly spending (current month)
+    const monthlySpent = expenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
+
+    // Generate progress data for each budget type
+    const progressData: any = {};
+
+    if (userPrefs.daily_budget) {
+      const remaining = Math.max(0, userPrefs.daily_budget - dailySpent);
+      const percentage = Math.min(100, Math.round((dailySpent / userPrefs.daily_budget) * 100));
+
+      progressData.daily = {
+        budget: userPrefs.daily_budget,
+        spent: dailySpent,
+        remaining,
+        percentage,
+        status: percentage >= 100 ? 'exceeded' : percentage >= 80 ? 'warning' : 'safe',
+      };
+    }
+
+    if (userPrefs.weekly_budget) {
+      const remaining = Math.max(0, userPrefs.weekly_budget - weeklySpent);
+      const percentage = Math.min(100, Math.round((weeklySpent / userPrefs.weekly_budget) * 100));
+
+      progressData.weekly = {
+        budget: userPrefs.weekly_budget,
+        spent: weeklySpent,
+        remaining,
+        percentage,
+        status: percentage >= 100 ? 'exceeded' : percentage >= 80 ? 'warning' : 'safe',
+      };
+    }
+
+    if (userPrefs.monthly_budget) {
+      const remaining = Math.max(0, userPrefs.monthly_budget - monthlySpent);
+      const percentage = Math.min(100, Math.round((monthlySpent / userPrefs.monthly_budget) * 100));
+
+      progressData.monthly = {
+        budget: userPrefs.monthly_budget,
+        spent: monthlySpent,
+        remaining,
+        percentage,
+        status: percentage >= 100 ? 'exceeded' : percentage >= 80 ? 'warning' : 'safe',
+      };
+    }
+
+    const response: ApiResponse = {
+      success: true,
+      message: 'Spending progress retrieved successfully',
+      data: progressData,
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Get spending progress error:', error);
+    const response: ApiResponse = {
+      success: false,
+      message: 'Failed to get spending progress',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+
+    res.status(500).json(response);
+  }
+};
+
+// Update push token for notifications
+export const updatePushToken = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { pushToken } = req.body;
+
+    if (!pushToken) {
+      const response: ApiResponse = {
+        success: false,
+        message: 'Push token is required',
+        error: 'Missing push token',
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('user_preferences')
+      .update({ push_token: pushToken })
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Update push token error:', error);
+      const response: ApiResponse = {
+        success: false,
+        message: 'Failed to update push token',
+        error: error.message,
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    const response: ApiResponse = {
+      success: true,
+      message: 'Push token updated successfully',
+      data: { pushToken },
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Update push token error:', error);
+    const response: ApiResponse = {
+      success: false,
+      message: 'Failed to update push token',
       error: error instanceof Error ? error.message : 'Unknown error',
     };
 

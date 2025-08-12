@@ -1,9 +1,12 @@
 # Dependencies
 node_modules/
+*.json
+*.backup
 
 # Build output
 dist/
 build/
+google-services.json
 
 # Environment variables
 .env

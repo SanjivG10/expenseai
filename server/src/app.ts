@@ -10,8 +10,9 @@ import expenseRoutes from './routes/expenses';
 import notificationRoutes from './routes/notifications';
 import preferencesRoutes from './routes/preferences';
 import screenRoutes from './routes/screens';
+import subscriptionRoutes from './routes/subscriptions';
+import webhookRoutes from './routes/webhooks';
 import { cronScheduler } from './services/cronScheduler';
-import { PushNotificationService } from './services/pushNotificationService';
 
 // Handle uncaught exceptions
 handleUncaughtExceptions();
@@ -47,6 +48,9 @@ app.use(
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   })
 );
+
+// Webhook routes need raw body for Stripe signature verification
+app.use('/webhooks/stripe', express.raw({ type: 'application/json' }));
 
 // Request parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -85,6 +89,9 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Webhook routes (before other middleware)
+app.use('/webhooks', webhookRoutes);
+
 // API routes
 app.use(`/api/${env.API_VERSION}/auth`, authRoutes);
 app.use(`/api/${env.API_VERSION}/screens`, screenRoutes);
@@ -92,6 +99,7 @@ app.use(`/api/${env.API_VERSION}/expenses`, expenseRoutes);
 app.use(`/api/${env.API_VERSION}/categories`, categoryRoutes);
 app.use(`/api/${env.API_VERSION}/preferences`, preferencesRoutes);
 app.use(`/api/${env.API_VERSION}/notifications`, notificationRoutes);
+app.use(`/api/${env.API_VERSION}/subscriptions`, subscriptionRoutes);
 
 // Catch 404 and forward to error handler
 app.use(notFoundHandler);
@@ -132,14 +140,5 @@ process.on('SIGINT', () => {
     process.exit(0);
   });
 });
-
-(async () => {
-  const notificationService = new PushNotificationService();
-  await notificationService.sendNotificationToUser(
-    'ExponentPushToken[cWPeG_Ow99ug1SWKOlkOnN]',
-    'Yoooo',
-    'This is a test notification'
-  );
-})();
 
 export default app;

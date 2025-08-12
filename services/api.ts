@@ -268,6 +268,27 @@ class ApiService {
   async testMonthlyNotification(): Promise<ApiResponse<any>> {
     return this.post(API_ENDPOINTS.NOTIFICATIONS_TEST_MONTHLY, {}, true);
   }
+
+  // Subscription and payment methods
+  async createSubscription(data: any): Promise<ApiResponse<any>> {
+    return this.post(API_ENDPOINTS.SUBSCRIPTION_CREATE, data, true);
+  }
+
+  async getUserSubscription(): Promise<ApiResponse<any>> {
+    return this.get(API_ENDPOINTS.SUBSCRIPTIONS, true);
+  }
+
+  async cancelSubscription(data: any): Promise<ApiResponse<any>> {
+    return this.post(API_ENDPOINTS.SUBSCRIPTION_CANCEL, data, true);
+  }
+
+  async updatePaymentMethod(data: any): Promise<ApiResponse<any>> {
+    return this.post(API_ENDPOINTS.SUBSCRIPTION_UPDATE_PAYMENT_METHOD, data, true);
+  }
+
+  async createPaymentIntent(data: any): Promise<ApiResponse<any>> {
+    return this.post(API_ENDPOINTS.PAYMENT_INTENT_CREATE, data, true);
+  }
 }
 
 export const apiService = new ApiService();

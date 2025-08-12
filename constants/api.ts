@@ -48,6 +48,13 @@ export const API_ENDPOINTS = {
   // Push token
   PREFERENCES_PUSH_TOKEN: '/preferences/push-token',
   PREFERENCES_SPENDING_PROGRESS: '/preferences/spending-progress',
+
+  // Subscriptions and payments
+  SUBSCRIPTIONS: '/subscriptions',
+  SUBSCRIPTION_CREATE: '/subscriptions/create',
+  SUBSCRIPTION_CANCEL: '/subscriptions/cancel',
+  SUBSCRIPTION_UPDATE_PAYMENT_METHOD: '/subscriptions/update-payment-method',
+  PAYMENT_INTENT_CREATE: '/payments/create-intent',
 } as const;
 
 // Helper function to build full API URLs

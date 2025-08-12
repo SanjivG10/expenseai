@@ -20,6 +20,7 @@
     "@react-navigation/native": "^7.1.17",
     "@react-navigation/stack": "^7.4.5",
     "@shopify/react-native-skia": "^2.2.2",
+    "@stripe/stripe-react-native": "^0.50.3",
     "axios": "^1.11.0",
     "date-fns": "^4.1.0",
     "expo": "^53.0.20",

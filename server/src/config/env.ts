@@ -49,6 +49,8 @@ const envSchema = z.object({
 
   // Logging
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
+
+  STRIPE_SECRET_KEY: z.string().min(1, 'Stripe API key is required'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

@@ -41,8 +41,22 @@ export interface DashboardScreenResponse {
   data: DashboardScreenData;
 }
 
+export interface BudgetPeriod {
+  budget: number;
+  spent: number;
+  remaining: number;
+  percentage: number;
+}
+
+export interface BudgetProgress {
+  daily: BudgetPeriod | null;
+  weekly: BudgetPeriod | null;
+  monthly: BudgetPeriod | null;
+}
+
 export interface DashboardScreenData {
   monthly_stats: MonthlyStats;
   recent_expenses: RecentExpense[];
   calendar_data: CalendarData;
+  budget_progress: BudgetProgress | null;
 }

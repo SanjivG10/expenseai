@@ -29,10 +29,26 @@ export const getDashboardDataService = async (
   const startOfCurrentMonth = startOfMonth(targetDate);
   const endOfCurrentMonth = endOfMonth(targetDate);
 
+  // Get user preferences for budget information
+  const { data: userPrefs, error: prefsError } = await supabaseAdmin
+    .from('user_preferences')
+    .select('daily_budget, weekly_budget, monthly_budget')
+    .eq('user_id', userId)
+    .single();
+
+  let budgetData = null;
+  if (userPrefs && !prefsError) {
+    budgetData = {
+      daily_budget: userPrefs.daily_budget,
+      weekly_budget: userPrefs.weekly_budget,
+      monthly_budget: userPrefs.monthly_budget,
+    };
+  }
+
   // Get monthly stats
   const { data: monthlyExpenses, error: monthlyError } = await supabaseAdmin
     .from('expenses')
-    .select('amount')
+    .select('amount, expense_date')
     .eq('user_id', userId)
     .gte('expense_date', format(startOfCurrentMonth, 'yyyy-MM-dd'))
     .lte('expense_date', format(endOfCurrentMonth, 'yyyy-MM-dd'));
@@ -134,10 +150,57 @@ export const getDashboardDataService = async (
     });
   });
 
+  // Calculate budget progress if budgets exist
+  let budgetProgress = null;
+  if (budgetData) {
+    const currentDate = new Date();
+    const currentDateStr = format(currentDate, 'yyyy-MM-dd');
+
+    // Calculate daily spending (today only)
+    const todayExpenses = monthlyExpenses.filter((exp) => exp.expense_date === currentDateStr);
+    const dailySpent = todayExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
+
+    // Calculate weekly spending (current week)
+    const weekStart = format(addDays(currentDate, -currentDate.getDay()), 'yyyy-MM-dd');
+    const weekExpenses = monthlyExpenses.filter((exp) => exp.expense_date >= weekStart);
+    const weeklySpent = weekExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
+
+    // Monthly spending is already calculated above
+    const monthlySpent = totalAmount;
+
+    budgetProgress = {
+      daily: budgetData.daily_budget
+        ? {
+            budget: budgetData.daily_budget,
+            spent: dailySpent,
+            remaining: Math.max(0, budgetData.daily_budget - dailySpent),
+            percentage: Math.min(100, Math.round((dailySpent / budgetData.daily_budget) * 100)),
+          }
+        : null,
+      weekly: budgetData.weekly_budget
+        ? {
+            budget: budgetData.weekly_budget,
+            spent: weeklySpent,
+            remaining: Math.max(0, budgetData.weekly_budget - weeklySpent),
+            percentage: Math.min(100, Math.round((weeklySpent / budgetData.weekly_budget) * 100)),
+          }
+        : null,
+      monthly: budgetData.monthly_budget
+        ? {
+            budget: budgetData.monthly_budget,
+            spent: monthlySpent,
+            remaining: Math.max(0, budgetData.monthly_budget - monthlySpent),
+            percentage: Math.min(100, Math.round((monthlySpent / budgetData.monthly_budget) * 100)),
+          }
+        : null,
+    };
+  }
+
   return {
     monthly_stats: monthlyStats,
     recent_expenses: recentExpenses,
     calendar_data: calendarData,
+    budget_progress: budgetProgress,
   };
 };
 

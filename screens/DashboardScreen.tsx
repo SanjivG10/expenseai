@@ -143,6 +143,135 @@ export default function DashboardScreen() {
             <Text className="mt-1 text-sm text-muted-foreground">Total spent</Text>
           </View>
         )}
+
+        {/* Budget Indicators */}
+        {!showCalendarView && dashboardData?.budget_progress && (
+          <View className="mx-6 mt-6">
+            <Text className="mb-4 text-lg font-semibold text-foreground">Budget Progress</Text>
+            <View className="gap-3">
+              {/* Daily Budget */}
+              {dashboardData.budget_progress.daily && (
+                <View className="rounded-lg border border-border bg-secondary p-4">
+                  <View className="mb-3 flex-row items-center justify-between">
+                    <View className="flex-row items-center">
+                      <View className="mr-3 h-8 w-8 items-center justify-center rounded-full bg-accent">
+                        <Ionicons name="today-outline" size={16} color="#FFFFFF" />
+                      </View>
+                      <Text className="font-medium text-foreground">Daily Budget</Text>
+                    </View>
+                    <Text className="text-sm font-medium text-muted-foreground">
+                      {dashboardData.budget_progress.daily.percentage}%
+                    </Text>
+                  </View>
+                  
+                  {/* Progress Bar */}
+                  <View className="mb-2 h-2 rounded-full bg-border overflow-hidden">
+                    <View 
+                      className={`h-full rounded-full ${
+                        dashboardData.budget_progress.daily.percentage >= 100 
+                          ? 'bg-red-500' 
+                          : dashboardData.budget_progress.daily.percentage >= 80 
+                          ? 'bg-yellow-500' 
+                          : 'bg-green-500'
+                      }`}
+                      style={{ width: `${Math.min(100, dashboardData.budget_progress.daily.percentage)}%` }}
+                    />
+                  </View>
+                  
+                  <View className="flex-row justify-between">
+                    <Text className="text-sm text-muted-foreground">
+                      ${dashboardData.budget_progress.daily.spent.toFixed(2)} spent
+                    </Text>
+                    <Text className="text-sm text-muted-foreground">
+                      ${dashboardData.budget_progress.daily.remaining.toFixed(2)} left
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Weekly Budget */}
+              {dashboardData.budget_progress.weekly && (
+                <View className="rounded-lg border border-border bg-secondary p-4">
+                  <View className="mb-3 flex-row items-center justify-between">
+                    <View className="flex-row items-center">
+                      <View className="mr-3 h-8 w-8 items-center justify-center rounded-full bg-accent">
+                        <Ionicons name="calendar-outline" size={16} color="#FFFFFF" />
+                      </View>
+                      <Text className="font-medium text-foreground">Weekly Budget</Text>
+                    </View>
+                    <Text className="text-sm font-medium text-muted-foreground">
+                      {dashboardData.budget_progress.weekly.percentage}%
+                    </Text>
+                  </View>
+                  
+                  {/* Progress Bar */}
+                  <View className="mb-2 h-2 rounded-full bg-border overflow-hidden">
+                    <View 
+                      className={`h-full rounded-full ${
+                        dashboardData.budget_progress.weekly.percentage >= 100 
+                          ? 'bg-red-500' 
+                          : dashboardData.budget_progress.weekly.percentage >= 80 
+                          ? 'bg-yellow-500' 
+                          : 'bg-green-500'
+                      }`}
+                      style={{ width: `${Math.min(100, dashboardData.budget_progress.weekly.percentage)}%` }}
+                    />
+                  </View>
+                  
+                  <View className="flex-row justify-between">
+                    <Text className="text-sm text-muted-foreground">
+                      ${dashboardData.budget_progress.weekly.spent.toFixed(2)} spent
+                    </Text>
+                    <Text className="text-sm text-muted-foreground">
+                      ${dashboardData.budget_progress.weekly.remaining.toFixed(2)} left
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Monthly Budget */}
+              {dashboardData.budget_progress.monthly && (
+                <View className="rounded-lg border border-border bg-secondary p-4">
+                  <View className="mb-3 flex-row items-center justify-between">
+                    <View className="flex-row items-center">
+                      <View className="mr-3 h-8 w-8 items-center justify-center rounded-full bg-accent">
+                        <Ionicons name="trending-up-outline" size={16} color="#FFFFFF" />
+                      </View>
+                      <Text className="font-medium text-foreground">Monthly Budget</Text>
+                    </View>
+                    <Text className="text-sm font-medium text-muted-foreground">
+                      {dashboardData.budget_progress.monthly.percentage}%
+                    </Text>
+                  </View>
+                  
+                  {/* Progress Bar */}
+                  <View className="mb-2 h-2 rounded-full bg-border overflow-hidden">
+                    <View 
+                      className={`h-full rounded-full ${
+                        dashboardData.budget_progress.monthly.percentage >= 100 
+                          ? 'bg-red-500' 
+                          : dashboardData.budget_progress.monthly.percentage >= 80 
+                          ? 'bg-yellow-500' 
+                          : 'bg-green-500'
+                      }`}
+                      style={{ width: `${Math.min(100, dashboardData.budget_progress.monthly.percentage)}%` }}
+                    />
+                  </View>
+                  
+                  <View className="flex-row justify-between">
+                    <Text className="text-sm text-muted-foreground">
+                      ${dashboardData.budget_progress.monthly.spent.toFixed(2)} spent
+                    </Text>
+                    <Text className="text-sm text-muted-foreground">
+                      ${dashboardData.budget_progress.monthly.remaining.toFixed(2)} left
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
         {/* Quick Stats */}
         {!showCalendarView && dashboardData && (
           <View className="mx-6 mt-4 flex-row gap-3">

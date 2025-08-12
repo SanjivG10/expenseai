@@ -101,6 +101,26 @@ export interface DashboardData {
   monthly_stats: MonthlyStats;
   recent_expenses: RecentExpense[];
   calendar_data: CalendarData;
+  budget_progress: {
+    daily: {
+      budget: number;
+      spent: number;
+      remaining: number;
+      percentage: number;
+    } | null;
+    weekly: {
+      budget: number;
+      spent: number;
+      remaining: number;
+      percentage: number;
+    } | null;
+    monthly: {
+      budget: number;
+      spent: number;
+      remaining: number;
+      percentage: number;
+    } | null;
+  } | null;
 }
 
 export interface ExpensesScreenData {

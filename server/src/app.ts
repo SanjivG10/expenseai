@@ -7,6 +7,7 @@ import { apiLimiter } from './middleware/rateLimiter';
 import authRoutes from './routes/auth';
 import categoryRoutes from './routes/categories';
 import expenseRoutes from './routes/expenses';
+import iapRoutes from './routes/iap';
 import notificationRoutes from './routes/notifications';
 import preferencesRoutes from './routes/preferences';
 import screenRoutes from './routes/screens';
@@ -100,6 +101,7 @@ app.use(`/api/${env.API_VERSION}/categories`, categoryRoutes);
 app.use(`/api/${env.API_VERSION}/preferences`, preferencesRoutes);
 app.use(`/api/${env.API_VERSION}/notifications`, notificationRoutes);
 app.use(`/api/${env.API_VERSION}/subscriptions`, subscriptionRoutes);
+app.use(`/api/${env.API_VERSION}/iap`, iapRoutes);
 
 // Catch 404 and forward to error handler
 app.use(notFoundHandler);

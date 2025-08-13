@@ -1,5 +1,6 @@
 // Subscription and payment types for ExpenseAI
 import { ENV } from '../constants/envs';
+import type { Purchase, SubscriptionPurchase } from 'react-native-iap';
 
 export type SubscriptionPlan = 'weekly' | 'monthly' | 'yearly';
 export type SubscriptionStatus = 'active' | 'inactive' | 'cancelled' | 'past_due' | 'trialing';
@@ -15,16 +16,28 @@ export interface PricingPlan {
   description: string;
   features: string[];
   isPopular?: boolean;
+  // Stripe IDs (for web or legacy)
   stripeProductId: string;
   stripePriceId: string;
+  // IAP product IDs
+  iosProductId: string;
+  androidProductId: string;
   savings?: string;
 }
 
 export interface UserSubscription {
   id: string;
   user_id: string;
-  stripe_customer_id: string;
-  stripe_subscription_id: string;
+  // For backward compatibility with Stripe
+  stripe_customer_id?: string;
+  stripe_subscription_id?: string;
+  // IAP specific fields
+  platform?: 'ios' | 'android';
+  product_id?: string;
+  transaction_id?: string;
+  original_transaction_id?: string;
+  receipt_data?: string;
+  // Common fields
   plan: SubscriptionPlan;
   status: SubscriptionStatus;
   current_period_start: string;
@@ -76,6 +89,30 @@ export interface UpdatePaymentMethodResponse {
   message: string;
 }
 
+// IAP specific types
+export interface VerifyPurchaseRequest {
+  receipt: Purchase | SubscriptionPurchase;
+  platform: 'ios' | 'android';
+}
+
+export interface VerifyPurchaseResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    subscription: UserSubscription;
+    verified: boolean;
+  };
+}
+
+export interface RestorePurchasesResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    subscriptions: UserSubscription[];
+    restored: boolean;
+  };
+}
+
 // Payment intent types for one-time payments (if needed)
 export interface CreatePaymentIntentRequest {
   amount: number;
@@ -110,6 +147,8 @@ export const PRICING_PLANS: PricingPlan[] = [
     ],
     stripeProductId: ENV.STRIPE_PRODUCT_ID,
     stripePriceId: ENV.STRIPE_WEEKLY_PRICE_ID,
+    iosProductId: 'com.expenseai.weekly',
+    androidProductId: 'weekly_subscription',
   },
   {
     id: 'monthly',
@@ -130,6 +169,8 @@ export const PRICING_PLANS: PricingPlan[] = [
     savings: 'Save 20%',
     stripeProductId: ENV.STRIPE_PRODUCT_ID,
     stripePriceId: ENV.STRIPE_MONTHLY_PRICE_ID,
+    iosProductId: 'com.expenseai.monthly',
+    androidProductId: 'monthly_subscription',
   },
   {
     id: 'yearly',
@@ -149,6 +190,8 @@ export const PRICING_PLANS: PricingPlan[] = [
     savings: 'Save 33%',
     stripeProductId: ENV.STRIPE_PRODUCT_ID,
     stripePriceId: ENV.STRIPE_YEARLY_PRICE_ID,
+    iosProductId: 'com.expenseai.yearly',
+    androidProductId: 'yearly_subscription',
   },
 ];
 

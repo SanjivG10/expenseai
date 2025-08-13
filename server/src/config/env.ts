@@ -51,6 +51,8 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
 
   STRIPE_SECRET_KEY: z.string().min(1, 'Stripe API key is required'),
+  APPLE_SHARED_SECRET: z.string().min(1, 'Apple shared secret is required'),
+  ANDROID_PACKAGE_NAME: z.string().min(1, 'Android package name is required'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

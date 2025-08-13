@@ -1,4 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { Platform } from 'react-native';
+import { apiService } from '../services/api';
+import { iapService } from '../services/iapService';
 import { stripeService } from '../services/stripeService';
 import { UserSubscription, isSubscriptionActive } from '../types/subscription';
 
@@ -39,7 +42,25 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     try {
       setSubscriptionState((prev) => ({ ...prev, isLoading: true }));
 
-      const subscription = await stripeService.getUserSubscription();
+      let subscription: UserSubscription | null = null;
+
+      // Try to get subscription from IAP first on mobile
+      if (Platform.OS === 'ios' || Platform.OS === 'android') {
+        try {
+          // Check for IAP subscription
+          const response = await apiService.get('/iap/subscription-status', true);
+          if (response.success && response.data) {
+            subscription = response.data;
+          }
+        } catch (error) {
+          console.log('No IAP subscription found, checking Stripe...');
+        }
+      }
+
+      // Fallback to Stripe if no IAP subscription found
+      if (!subscription) {
+        subscription = await stripeService.getUserSubscription();
+      }
 
       if (subscription) {
         const isActive = isSubscriptionActive(subscription);

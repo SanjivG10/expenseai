@@ -56,6 +56,10 @@ export const API_ENDPOINTS = {
   SUBSCRIPTION_UPDATE_PAYMENT_METHOD: '/subscriptions/update-payment-method',
   SUBSCRIPTION_BILLING_HISTORY: '/subscriptions/billing-history',
   PAYMENT_INTENT_CREATE: '/payments/create-intent',
+  
+  // In-App Purchases
+  IAP_VERIFY_PURCHASE: '/iap/verify-purchase',
+  IAP_RESTORE_PURCHASES: '/iap/restore-purchases',
 } as const;
 
 // Helper function to build full API URLs

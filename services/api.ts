@@ -288,6 +288,12 @@ class ApiService {
   async getBillingHistory(): Promise<ApiResponse<any[]>> {
     return this.get(API_ENDPOINTS.SUBSCRIPTION_BILLING_HISTORY, true);
   }
+  async verifyPurchase(data: any): Promise<ApiResponse<any>> {
+    return this.post(API_ENDPOINTS.IAP_VERIFY_PURCHASE, data, true);
+  }
+  async restorePurchases(): Promise<ApiResponse<any>> {
+    return this.post(API_ENDPOINTS.IAP_RESTORE_PURCHASES, {}, true);
+  }
 
   async createPaymentIntent(data: any): Promise<ApiResponse<any>> {
     return this.post(API_ENDPOINTS.PAYMENT_INTENT_CREATE, data, true);

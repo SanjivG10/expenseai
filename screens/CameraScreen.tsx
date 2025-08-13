@@ -10,7 +10,12 @@ import AddExpenseScreen from './AddExpenseScreen';
 import { apiService } from '../services/api';
 import { ProcessReceiptResponse } from '../types/api';
 
-export default function CameraScreen() {
+interface CameraScreenProps {
+  onScanComplete?: (data: any) => void;
+  onBack?: () => void;
+}
+
+export default function CameraScreen({ onScanComplete, onBack }: CameraScreenProps = {}) {
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
   const [showAddExpense, setShowAddExpense] = useState(false);
@@ -57,7 +62,11 @@ export default function CameraScreen() {
       
       if (response.success) {
         setProcessedData(response.data);
-        setShowAddExpense(true);
+        if (onScanComplete) {
+          onScanComplete(response.data);
+        } else {
+          setShowAddExpense(true);
+        }
       } else {
         Alert.alert('Processing Failed', response.message || 'Failed to process receipt');
       }
@@ -120,8 +129,17 @@ export default function CameraScreen() {
 
       {/* Header */}
       <View className="border-b border-border bg-background px-6 pb-4 pt-14">
-        <Text className="text-2xl font-bold text-foreground">Add Expense</Text>
-        <Text className="mt-1 text-sm text-muted-foreground">Scan receipt or add manually</Text>
+        <View className="flex-row items-center">
+          {onBack && (
+            <TouchableOpacity onPress={onBack} className="mr-4">
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          )}
+          <View>
+            <Text className="text-2xl font-bold text-foreground">Scan Receipt</Text>
+            <Text className="mt-1 text-sm text-muted-foreground">Point camera at your receipt</Text>
+          </View>
+        </View>
       </View>
 
       {/* Camera View */}

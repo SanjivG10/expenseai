@@ -332,25 +332,6 @@ export default function DashboardScreen() {
           )}
         </View>
 
-        {!showCalendarView && (
-          <View className="mx-6 mt-6">
-            <Text className="mb-4 text-lg font-semibold text-foreground">Quick Actions</Text>
-            <View className="flex-row gap-3">
-              <TouchableOpacity
-                onPress={() => navigation.navigate(ROUTES.CAMERA as never)}
-                className="flex-1 items-center rounded-lg bg-primary p-4">
-                <Ionicons name="camera-outline" size={24} color="#000000" />
-                <Text className="mt-2 font-medium text-primary-foreground">Scan Receipt</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setShowAddExpense(true)}
-                className="flex-1 items-center rounded-lg border border-border bg-secondary p-4">
-                <Ionicons name="add-outline" size={24} color="#FFFFFF" />
-                <Text className="mt-2 font-medium text-foreground">Add Manual</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
         {/* Bottom Spacing for Tab Bar */}
         <View className="h-10" />
       </ScrollView>

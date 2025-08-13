@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Platform } from 'react-native';
 
 import DashboardScreen from '../screens/DashboardScreen';
-import CameraScreen from '../screens/CameraScreen';
+import AddScreen from '../screens/AddScreen';
 import ExpensesScreen from '../screens/ExpensesScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
@@ -13,6 +13,7 @@ const Tab = createBottomTabNavigator();
 export default function TabNavigator() {
   return (
     <Tab.Navigator
+      initialRouteName="Dashboard"
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {
@@ -37,8 +38,8 @@ export default function TabNavigator() {
             case 'Dashboard':
               iconName = focused ? 'home' : 'home-outline';
               break;
-            case 'Camera':
-              iconName = focused ? 'camera' : 'camera-outline';
+            case 'Add':
+              iconName = focused ? 'add' : 'add-outline';
               break;
             case 'Expenses':
               iconName = focused ? 'list' : 'list-outline';
@@ -56,8 +57,8 @@ export default function TabNavigator() {
           return <Ionicons name={iconName} size={size} color={color} />;
         },
       })}>
+      <Tab.Screen name="Add" component={AddScreen} options={{ title: 'Add' }} />
       <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ title: 'Home' }} />
-      <Tab.Screen name="Camera" component={CameraScreen} options={{ title: 'Scan' }} />
       <Tab.Screen name="Expenses" component={ExpensesScreen} />
       <Tab.Screen name="Analytics" component={AnalyticsScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />

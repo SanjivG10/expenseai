@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { Alert, Animated, Text, TouchableOpacity, View } from 'react-native';
 import { InlineLoader } from '../components/LoadingScreen';
+import { apiService } from '../services/api';
 
 interface VoiceScreenProps {
   onVoiceComplete: (data: any) => void;
@@ -121,19 +122,54 @@ export default function VoiceScreen({ onVoiceComplete, onBack }: VoiceScreenProp
       const uri = recording.getURI();
       if (uri) {
         setIsProcessing(true);
-        // Simulate processing voice data
-        setTimeout(() => {
+        try {
+          console.log('Voice recording URI:', uri);
+
+          // Send audio URI directly to backend for processing
+          const apiResponse = await apiService.processVoiceRecording(uri);
+
+          if (apiResponse.success) {
+            const processedData = {
+              amount: apiResponse.data.amount?.toString() || '',
+              description: apiResponse.data.description || '',
+              category_id: apiResponse.data.category_id || '',
+              expense_date: apiResponse.data.expense_date || new Date().toISOString().split('T')[0],
+              notes: apiResponse.data.notes || 'Recorded via voice entry',
+              item_breakdowns: apiResponse.data.item_breakdowns || [],
+            };
+            onVoiceComplete(processedData);
+          } else {
+            Alert.alert(
+              'Processing Failed',
+              apiResponse.message || 'Failed to process voice recording'
+            );
+          }
+        } catch (error) {
+          console.error('Voice processing error:', error);
+
+          // Provide more specific error messages to the user
+          let errorMessage = 'Failed to process voice recording. Please try again.';
+
+          if (error instanceof Error) {
+            if (error.message.includes('Network request failed')) {
+              errorMessage = 'Network error: Please check your internet connection and try again.';
+            } else if (error.message.includes('HTTP 401')) {
+              errorMessage = 'Authentication error: Please log in again.';
+            } else if (error.message.includes('HTTP 413')) {
+              errorMessage = 'Audio file too large: Please record a shorter message.';
+            } else if (error.message.includes('HTTP 500')) {
+              errorMessage = 'Server error: Please try again later.';
+            } else if (error.message.includes('timeout')) {
+              errorMessage = 'Request timeout: Please try again.';
+            } else {
+              errorMessage = `Error: ${error.message}`;
+            }
+          }
+
+          Alert.alert('Voice Processing Error', errorMessage);
+        } finally {
           setIsProcessing(false);
-          // For now, return sample data - in real implementation, this would be processed by AI
-          const processedData = {
-            amount: '15.50',
-            description: 'Coffee and pastry',
-            category_id: 'food',
-            expense_date: new Date().toISOString().split('T')[0],
-            notes: 'Recorded via voice entry',
-          };
-          onVoiceComplete(processedData);
-        }, 3000);
+        }
       }
 
       setRecording(null);

@@ -3,7 +3,7 @@ import { ENV } from './envs';
 export const API_CONFIG = {
   BASE_URL: ENV.API_BASE_URL || 'http://localhost:3000',
   VERSION: 'v1',
-  TIMEOUT: 10000, // 10 seconds
+  TIMEOUT: 60000, // 1 minute
 } as const;
 
 export const API_ENDPOINTS = {
@@ -28,6 +28,8 @@ export const API_ENDPOINTS = {
   EXPENSES: '/expenses',
   EXPENSE_BY_ID: '/expenses/:id',
   EXPENSE_UPLOAD_RECEIPT: '/expenses/upload-receipt',
+  EXPENSE_PROCESS_RECEIPT: '/expenses/process-receipt',
+  EXPENSE_PROCESS_VOICE: '/expenses/process-voice',
   CATEGORIES: '/categories',
   CATEGORY_BY_ID: '/categories/:id',
   USERS_PROFILE: '/users/profile',
@@ -56,7 +58,7 @@ export const API_ENDPOINTS = {
   SUBSCRIPTION_UPDATE_PAYMENT_METHOD: '/subscriptions/update-payment-method',
   SUBSCRIPTION_BILLING_HISTORY: '/subscriptions/billing-history',
   PAYMENT_INTENT_CREATE: '/payments/create-intent',
-  
+
   // In-App Purchases
   IAP_VERIFY_PURCHASE: '/iap/verify-purchase',
   IAP_RESTORE_PURCHASES: '/iap/restore-purchases',

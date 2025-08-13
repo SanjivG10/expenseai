@@ -21,7 +21,7 @@ import {
   UpdateProfileRequest,
   UserPreferences,
 } from '../types';
-import { AnalyticsData, AnalyticsScreenQuery, AnalyticsScreenResponse } from '../types/analytics';
+import { AnalyticsScreenQuery, AnalyticsScreenResponse } from '../types/analytics';
 
 const url = buildApiUrl(API_ENDPOINTS.AUTH_SIGNUP);
 console.log({ url, baseURL: API_CONFIG.BASE_URL });
@@ -211,6 +211,63 @@ class ApiService {
     imageData: string
   ): Promise<ApiResponse<{ image_url: string; file_name: string }>> {
     return this.post(API_ENDPOINTS.EXPENSE_UPLOAD_RECEIPT, { image: imageData }, true);
+  }
+
+  async processReceiptImage(imageData: string): Promise<ApiResponse<any>> {
+    // Convert base64 to proper data URL if needed
+    let formattedImage = imageData;
+    if (!imageData.startsWith('data:image/')) {
+      formattedImage = `data:image/jpeg;base64,${imageData}`;
+    }
+    return this.post(API_ENDPOINTS.EXPENSE_PROCESS_RECEIPT, { image: formattedImage }, true);
+  }
+
+  async processVoiceRecording(audioUri: string): Promise<ApiResponse<any>> {
+    try {
+      // Test if authentication works first
+      const token = await this.getAccessToken();
+      console.log('Voice recording - Auth token available:', !!token);
+
+      if (!token) {
+        throw new Error('No authentication token available');
+      }
+
+      // Since multipart uploads are failing, let's try base64 approach like images
+      console.log('Converting audio to base64...');
+      const { readAsStringAsync } = await import('expo-file-system');
+
+      const base64Audio = await readAsStringAsync(audioUri, {
+        encoding: 'base64',
+      });
+
+      // Send as JSON with base64 audio data
+      const response = await this.post(
+        API_ENDPOINTS.EXPENSE_PROCESS_VOICE,
+        {
+          audioData: `data:audio/wav;base64,${base64Audio}`,
+        },
+        true
+      );
+
+      console.log('Voice response:', response);
+      return response;
+    } catch (error) {
+      console.error('Voice processing network error:', {
+        error: error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      // Provide more specific error messages based on error type
+      if (error instanceof TypeError && error.message.includes('Network request failed')) {
+        throw new Error(
+          `Network request failed - Check if server is running. Error: ${error.message}`
+        );
+      } else if (error instanceof Error) {
+        throw new Error(`Voice processing failed: ${error.message}`);
+      } else {
+        throw new Error(`Unknown error occurred during voice processing: ${String(error)}`);
+      }
+    }
   }
 
   // Individual CRUD operations for categories

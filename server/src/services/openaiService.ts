@@ -33,6 +33,7 @@ export const processReceiptImage = async (
   userCategories: Category[]
 ): Promise<ProcessedExpenseData> => {
   try {
+    console.log('Processing receipt image:', imageUrl);
     const categoriesPrompt = userCategories.map((cat) => `"${cat.id}": "${cat.name}"`).join(', ');
 
     const prompt = `
@@ -49,7 +50,7 @@ Extract:
 
 Return ONLY a JSON object in this exact format:
 {
-  "amount": 0.00,
+  "amount": 0.00, // total amount of the receipt (all item cost, not just item cost)
   "description": "Store/merchant name or expense description",
   "category_id": "category_id_from_list",
   "notes": "Additional relevant information",
@@ -119,7 +120,7 @@ Rules:
       throw new Error('Invalid response format from OpenAI');
     }
   } catch (error) {
-    console.error('OpenAI receipt processing error:', error);
+    console.error('OpenAI receipt processing error:', JSON.stringify(error, null, 2));
     throw new Error('Failed to process receipt image');
   }
 };

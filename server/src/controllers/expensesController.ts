@@ -547,6 +547,7 @@ export const processReceipt = async (req: Request, res: Response): Promise<void>
 
     // Process with OpenAI using the uploaded image URL
     const processedData = await processReceiptImage(uploadResult.data.image_url, categories || []);
+    console.log('Processed data:', processedData);
 
     const response: ApiResponse = {
       success: true,
@@ -559,7 +560,7 @@ export const processReceipt = async (req: Request, res: Response): Promise<void>
     console.error('Process receipt error:', error);
     const response: ApiResponse = {
       success: false,
-      message: 'Failed to process receipt',
+      message: error instanceof Error ? error.message : 'Failed to process receipt',
       error: error instanceof Error ? error.message : 'Unknown error',
     };
 
@@ -574,14 +575,14 @@ export const processVoice = async (req: Request, res: Response): Promise<void> =
     console.log('Request headers:', req.headers);
     console.log('Request file:', req.file);
     console.log('Request body:', req.body);
-    
+
     const userId = req.user!.id;
 
     // Check for base64 audio data first (new approach)
     if (req.body.audioData) {
       console.log('Processing base64 audio data...');
       const audioData = req.body.audioData;
-      
+
       // Validate base64 audio format
       if (!audioData.startsWith('data:audio/')) {
         const response: ApiResponse = {

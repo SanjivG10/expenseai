@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, Image } from 'react-native';
 import { InlineLoader } from '../components/LoadingScreen';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
@@ -21,6 +21,7 @@ export default function CameraScreen({ onScanComplete, onBack }: CameraScreenPro
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processedData, setProcessedData] = useState<ProcessReceiptResponse | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const cameraRef = useRef<CameraView>(null);
 
   if (!permission) {
@@ -58,7 +59,7 @@ export default function CameraScreen({ onScanComplete, onBack }: CameraScreenPro
         encoding: FileSystem.EncodingType.Base64,
       });
       
-      const response = await apiService.processReceipt({ image: base64 });
+      const response = await apiService.processReceiptImage(base64);
       
       if (response.success) {
         setProcessedData(response.data);
@@ -87,7 +88,7 @@ export default function CameraScreen({ onScanComplete, onBack }: CameraScreenPro
         });
 
         if (photo?.uri) {
-          await processReceiptImage(photo.uri);
+          setPreviewImage(photo.uri);
         }
       } catch (error) {
         console.error('Error taking picture:', error);
@@ -108,7 +109,7 @@ export default function CameraScreen({ onScanComplete, onBack }: CameraScreenPro
       });
 
       if (!result.canceled && result.assets[0]) {
-        await processReceiptImage(result.assets[0].uri);
+        setPreviewImage(result.assets[0].uri);
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -120,6 +121,7 @@ export default function CameraScreen({ onScanComplete, onBack }: CameraScreenPro
     // Expense has been saved, just clean up UI state
     setShowAddExpense(false);
     setProcessedData(null);
+    setPreviewImage(null);
     // The AddExpenseScreen already shows success toast
   };
 
@@ -130,103 +132,171 @@ export default function CameraScreen({ onScanComplete, onBack }: CameraScreenPro
       {/* Header */}
       <View className="border-b border-border bg-background px-6 pb-4 pt-14">
         <View className="flex-row items-center">
-          {onBack && (
-            <TouchableOpacity onPress={onBack} className="mr-4">
+          {(onBack || previewImage) && (
+            <TouchableOpacity 
+              onPress={previewImage ? () => setPreviewImage(null) : onBack} 
+              className="mr-4"
+            >
               <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
             </TouchableOpacity>
           )}
           <View>
-            <Text className="text-2xl font-bold text-foreground">Scan Receipt</Text>
-            <Text className="mt-1 text-sm text-muted-foreground">Point camera at your receipt</Text>
+            <Text className="text-2xl font-bold text-foreground">
+              {previewImage ? 'Preview Image' : 'Scan Receipt'}
+            </Text>
+            <Text className="mt-1 text-sm text-muted-foreground">
+              {previewImage ? 'Review and send your receipt' : 'Point camera at your receipt'}
+            </Text>
           </View>
         </View>
       </View>
 
-      {/* Camera View */}
+      {/* Camera or Preview View */}
       <View className="m-4 flex-1 overflow-hidden rounded-xl border border-border">
-        <CameraView ref={cameraRef} style={{ flex: 1 }} facing={facing}>
-          {/* Processing Overlay */}
-          {isProcessing && (
-            <View className="absolute inset-0 bg-black/70 items-center justify-center">
-              <View className="bg-black/60 rounded-xl p-6 items-center">
-                <InlineLoader size="large" message="" showDots={false} />
-                <Text className="mt-4 text-lg text-white font-medium">Processing Receipt...</Text>
-                <Text className="mt-1 text-sm text-white/70">Extracting expense data with AI</Text>
+        {previewImage ? (
+          /* Image Preview */
+          <View className="flex-1">
+            <Image source={{ uri: previewImage }} className="flex-1" resizeMode="contain" />
+            
+            {/* Processing Overlay */}
+            {isProcessing && (
+              <View className="absolute inset-0 bg-black/70 items-center justify-center">
+                <View className="bg-black/60 rounded-xl p-6 items-center">
+                  <InlineLoader size="large" message="" showDots={false} />
+                  <Text className="mt-4 text-lg text-white font-medium">Processing Receipt...</Text>
+                  <Text className="mt-1 text-sm text-white/70">Extracting expense data with AI</Text>
+                </View>
+              </View>
+            )}
+          </View>
+        ) : (
+          /* Camera View */
+          <CameraView ref={cameraRef} style={{ flex: 1 }} facing={facing}>
+            {/* Processing Overlay */}
+            {isProcessing && (
+              <View className="absolute inset-0 bg-black/70 items-center justify-center">
+                <View className="bg-black/60 rounded-xl p-6 items-center">
+                  <InlineLoader size="large" message="" showDots={false} />
+                  <Text className="mt-4 text-lg text-white font-medium">Processing Receipt...</Text>
+                  <Text className="mt-1 text-sm text-white/70">Extracting expense data with AI</Text>
+                </View>
+              </View>
+            )}
+            
+            <View className="flex-1 justify-end p-6">
+              {/* Camera Controls */}
+              <View className="flex-row items-center justify-between">
+                {/* Gallery Button */}
+                <TouchableOpacity
+                  onPress={pickImage}
+                  disabled={isProcessing}
+                  className={`h-12 w-12 items-center justify-center rounded-full border border-border ${
+                    isProcessing ? 'bg-secondary/40' : 'bg-secondary/80'
+                  }`}>
+                  <Ionicons 
+                    name="images-outline" 
+                    size={24} 
+                    color={isProcessing ? "#666666" : "#FFFFFF"} 
+                  />
+                </TouchableOpacity>
+
+                {/* Capture Button */}
+                <TouchableOpacity
+                  onPress={takePicture}
+                  disabled={isProcessing}
+                  className={`h-20 w-20 items-center justify-center rounded-full border-4 ${
+                    isProcessing ? 'border-gray-600' : 'border-primary'
+                  }`}>
+                  <View className={`h-16 w-16 rounded-full ${
+                    isProcessing ? 'bg-gray-600' : 'bg-primary'
+                  }`} />
+                </TouchableOpacity>
+
+                {/* Flip Camera */}
+                <TouchableOpacity
+                  onPress={toggleCameraFacing}
+                  disabled={isProcessing}
+                  className={`h-12 w-12 items-center justify-center rounded-full border border-border ${
+                    isProcessing ? 'bg-secondary/40' : 'bg-secondary/80'
+                  }`}>
+                  <Ionicons 
+                    name="camera-reverse-outline" 
+                    size={24} 
+                    color={isProcessing ? "#666666" : "#FFFFFF"} 
+                  />
+                </TouchableOpacity>
               </View>
             </View>
-          )}
-          
-          <View className="flex-1 justify-end p-6">
-            {/* Camera Controls */}
-            <View className="flex-row items-center justify-between">
-              {/* Gallery Button */}
-              <TouchableOpacity
-                onPress={pickImage}
-                disabled={isProcessing}
-                className={`h-12 w-12 items-center justify-center rounded-full border border-border ${
-                  isProcessing ? 'bg-secondary/40' : 'bg-secondary/80'
-                }`}>
-                <Ionicons 
-                  name="images-outline" 
-                  size={24} 
-                  color={isProcessing ? "#666666" : "#FFFFFF"} 
-                />
-              </TouchableOpacity>
-
-              {/* Capture Button */}
-              <TouchableOpacity
-                onPress={takePicture}
-                disabled={isProcessing}
-                className={`h-20 w-20 items-center justify-center rounded-full border-4 ${
-                  isProcessing ? 'border-gray-600' : 'border-primary'
-                }`}>
-                <View className={`h-16 w-16 rounded-full ${
-                  isProcessing ? 'bg-gray-600' : 'bg-primary'
-                }`} />
-              </TouchableOpacity>
-
-              {/* Flip Camera */}
-              <TouchableOpacity
-                onPress={toggleCameraFacing}
-                disabled={isProcessing}
-                className={`h-12 w-12 items-center justify-center rounded-full border border-border ${
-                  isProcessing ? 'bg-secondary/40' : 'bg-secondary/80'
-                }`}>
-                <Ionicons 
-                  name="camera-reverse-outline" 
-                  size={24} 
-                  color={isProcessing ? "#666666" : "#FFFFFF"} 
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </CameraView>
+          </CameraView>
+        )}
       </View>
 
       {/* Action Buttons */}
       <View className="px-6 pb-24">
-        <TouchableOpacity 
-          onPress={() => {
-            setProcessedData(null);
-            setShowAddExpense(true);
-          }}
-          disabled={isProcessing}
-          className={`rounded-lg border border-border p-4 ${
-            isProcessing ? 'bg-secondary/50' : 'bg-secondary'
-          }`}>
-          <View className="flex-row items-center justify-center">
-            <Ionicons 
-              name="create-outline" 
-              size={20} 
-              color={isProcessing ? "#666666" : "#FFFFFF"} 
-            />
-            <Text className={`ml-2 font-medium ${
-              isProcessing ? 'text-muted-foreground' : 'text-foreground'
-            }`}>
-              Add Expense Manually
-            </Text>
+        {previewImage ? (
+          <View className="flex-row space-x-3">
+            <TouchableOpacity 
+              onPress={() => setPreviewImage(null)}
+              disabled={isProcessing}
+              className={`flex-1 rounded-lg border border-border p-4 ${
+                isProcessing ? 'bg-secondary/50' : 'bg-secondary'
+              }`}>
+              <View className="flex-row items-center justify-center">
+                <Ionicons 
+                  name="arrow-back-outline" 
+                  size={20} 
+                  color={isProcessing ? "#666666" : "#FFFFFF"} 
+                />
+                <Text className={`ml-2 font-medium ${
+                  isProcessing ? 'text-muted-foreground' : 'text-foreground'
+                }`}>
+                  Retake
+                </Text>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              onPress={() => processReceiptImage(previewImage)}
+              disabled={isProcessing}
+              className={`flex-1 rounded-lg p-4 ${
+                isProcessing ? 'bg-primary/50' : 'bg-primary'
+              }`}>
+              <View className="flex-row items-center justify-center">
+                <Ionicons 
+                  name="send-outline" 
+                  size={20} 
+                  color="#FFFFFF" 
+                />
+                <Text className="ml-2 font-medium text-primary-foreground">
+                  {isProcessing ? 'Processing...' : 'Send'}
+                </Text>
+              </View>
+            </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        ) : (
+          <TouchableOpacity 
+            onPress={() => {
+              setProcessedData(null);
+              setShowAddExpense(true);
+            }}
+            disabled={isProcessing}
+            className={`rounded-lg border border-border p-4 ${
+              isProcessing ? 'bg-secondary/50' : 'bg-secondary'
+            }`}>
+            <View className="flex-row items-center justify-center">
+              <Ionicons 
+                name="create-outline" 
+                size={20} 
+                color={isProcessing ? "#666666" : "#FFFFFF"} 
+              />
+              <Text className={`ml-2 font-medium ${
+                isProcessing ? 'text-muted-foreground' : 'text-foreground'
+              }`}>
+                Add Expense Manually
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
       </View>
 
       <AddExpenseScreen

@@ -43,7 +43,7 @@ app.use(
     origin:
       env.NODE_ENV === 'production'
         ? ['https://your-frontend-domain.com'] // Add your frontend domain
-        : ['http://localhost:3000', 'http://localhost:19006', 'exp://localhost:19000'], // Development origins
+        : true, // Allow all origins in development
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],

@@ -2,6 +2,87 @@ import { Request, Response } from 'express';
 import { supabaseAdmin } from '../config/supabase';
 import { ApiResponse } from '../types/api';
 import { CreateExpenseData, UpdateExpenseData, UploadImageData } from '../utils/validation';
+import {
+  processReceiptImage,
+  processExpenseText,
+  transcribeAudio,
+} from '../services/openaiService';
+
+// Helper function to upload image to storage
+async function uploadImageToStorage(
+  userId: string,
+  image: string
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    // Validate base64 image format
+    if (!image.startsWith('data:image/')) {
+      return {
+        success: false,
+        error: 'Invalid image format',
+      };
+    }
+
+    // Extract the base64 data and mime type
+    const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      return {
+        success: false,
+        error: 'Invalid base64 format',
+      };
+    }
+
+    const mimeType = matches[1];
+    const base64Data = matches[2];
+
+    // Validate mime type
+    if (!mimeType.startsWith('image/')) {
+      return {
+        success: false,
+        error: 'File must be an image',
+      };
+    }
+
+    // Convert base64 to buffer
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).substring(2, 15);
+    const fileExtension = mimeType.split('/')[1] || 'jpg';
+    const fileName = `receipts/${userId}/${timestamp}-${randomString}.${fileExtension}`;
+
+    // Upload to Supabase storage
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from('expenses')
+      .upload(fileName, buffer, {
+        contentType: mimeType,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      return {
+        success: false,
+        error: uploadError.message,
+      };
+    }
+
+    // Get public URL
+    const { data: urlData } = supabaseAdmin.storage.from('expenses').getPublicUrl(fileName);
+
+    return {
+      success: true,
+      data: {
+        image_url: urlData.publicUrl,
+        file_name: fileName,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
 
 // Helper function to resolve category ID - handles both UUID and category names
 async function resolveCategoryId(categoryIdentifier: string, userId: string): Promise<string> {
@@ -411,6 +492,231 @@ export const uploadReceiptImage = async (req: Request, res: Response): Promise<v
     const response: ApiResponse = {
       success: false,
       message: 'Failed to upload image',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+
+    res.status(500).json(response);
+  }
+};
+
+// Process receipt image with OpenAI
+export const processReceipt = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const { image } = req.body;
+
+    if (!image) {
+      const response: ApiResponse = {
+        success: false,
+        message: 'Image is required',
+        error: 'Missing image data',
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    // First upload the image to get a URL
+    const uploadResult = await uploadImageToStorage(userId, image);
+    if (!uploadResult.success) {
+      const response: ApiResponse = {
+        success: false,
+        message: 'Failed to upload image',
+        error: uploadResult.error || 'Unknown error',
+      };
+      res.status(500).json(response);
+      return;
+    }
+
+    // Get user's categories to pass to OpenAI
+    const { data: categories, error: categoriesError } = await supabaseAdmin
+      .from('categories')
+      .select('id, name')
+      .eq('user_id', userId)
+      .order('name');
+
+    if (categoriesError) {
+      console.error('Error fetching categories:', categoriesError);
+      const response: ApiResponse = {
+        success: false,
+        message: 'Failed to fetch user categories',
+        error: categoriesError.message,
+      };
+      res.status(500).json(response);
+      return;
+    }
+
+    // Process with OpenAI using the uploaded image URL
+    const processedData = await processReceiptImage(uploadResult.data.image_url, categories || []);
+
+    const response: ApiResponse = {
+      success: true,
+      message: 'Receipt processed successfully',
+      data: processedData,
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Process receipt error:', error);
+    const response: ApiResponse = {
+      success: false,
+      message: 'Failed to process receipt',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+
+    res.status(500).json(response);
+  }
+};
+
+// Process voice transcription with OpenAI
+export const processVoice = async (req: Request, res: Response): Promise<void> => {
+  try {
+    console.log('processVoice endpoint hit!');
+    console.log('Request headers:', req.headers);
+    console.log('Request file:', req.file);
+    console.log('Request body:', req.body);
+    
+    const userId = req.user!.id;
+
+    // Check for base64 audio data first (new approach)
+    if (req.body.audioData) {
+      console.log('Processing base64 audio data...');
+      const audioData = req.body.audioData;
+      
+      // Validate base64 audio format
+      if (!audioData.startsWith('data:audio/')) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Invalid audio format',
+          error: 'Audio must be a valid base64 encoded audio file',
+        };
+        res.status(400).json(response);
+        return;
+      }
+
+      // Extract the base64 data
+      const matches = audioData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (!matches || matches.length !== 3) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'Invalid base64 format',
+          error: 'Audio must be properly formatted base64',
+        };
+        res.status(400).json(response);
+        return;
+      }
+
+      const mimeType = matches[1];
+      const base64Data = matches[2];
+
+      // Convert base64 to buffer
+      const audioBuffer = Buffer.from(base64Data, 'base64');
+      console.log('Audio buffer created:', audioBuffer.length, 'bytes');
+
+      // Get user's categories to pass to OpenAI
+      const { data: categories, error: categoriesError } = await supabaseAdmin
+        .from('categories')
+        .select('id, name')
+        .eq('user_id', userId)
+        .order('name');
+
+      if (categoriesError) {
+        console.error('Error fetching categories:', categoriesError);
+        const response: ApiResponse = {
+          success: false,
+          message: 'Failed to fetch user categories',
+          error: categoriesError.message,
+        };
+        res.status(500).json(response);
+        return;
+      }
+
+      // Transcribe audio with OpenAI Whisper
+      const transcription = await transcribeAudio(audioBuffer, 'voice-recording.wav');
+
+      if (!transcription.trim()) {
+        const response: ApiResponse = {
+          success: false,
+          message: 'No speech detected in audio',
+          error: 'Empty transcription',
+        };
+        res.status(400).json(response);
+        return;
+      }
+
+      const processedData = await processExpenseText(transcription, categories || []);
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Voice processed successfully',
+        data: {
+          ...processedData,
+          transcription,
+        },
+      };
+
+      res.json(response);
+      return;
+    }
+
+    // Fallback to multipart file upload (old approach)
+    if (!req.file) {
+      const response: ApiResponse = {
+        success: false,
+        message: 'Audio file is required',
+        error: 'Missing audio file or audioData',
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    // Get user's categories to pass to OpenAI
+    const { data: categories, error: categoriesError } = await supabaseAdmin
+      .from('categories')
+      .select('id, name')
+      .eq('user_id', userId)
+      .order('name');
+
+    if (categoriesError) {
+      console.error('Error fetching categories:', categoriesError);
+      const response: ApiResponse = {
+        success: false,
+        message: 'Failed to fetch user categories',
+        error: categoriesError.message,
+      };
+      res.status(500).json(response);
+      return;
+    }
+
+    // Transcribe audio with OpenAI Whisper
+    const transcription = await transcribeAudio(req.file.buffer, req.file.originalname);
+
+    if (!transcription.trim()) {
+      const response: ApiResponse = {
+        success: false,
+        message: 'No speech detected in audio',
+        error: 'Empty transcription',
+      };
+      res.status(400).json(response);
+      return;
+    }
+
+    const processedData = await processExpenseText(transcription, categories || []);
+
+    const response: ApiResponse = {
+      success: true,
+      message: 'Voice processed successfully',
+      data: {
+        ...processedData,
+        transcription,
+      },
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Process voice error:', error);
+    const response: ApiResponse = {
+      success: false,
+      message: 'Failed to process voice',
       error: error instanceof Error ? error.message : 'Unknown error',
     };
 

@@ -16,11 +16,15 @@ import {
 
 interface SubscriptionScreenProps {
   onComplete: () => void;
+  onSkip?: () => void;
+  onBack?: () => void;
   showSkipOption?: boolean;
 }
 
 export default function SubscriptionScreen({
   onComplete,
+  onSkip,
+  onBack,
   showSkipOption = false,
 }: SubscriptionScreenProps) {
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>('monthly');
@@ -74,13 +78,16 @@ export default function SubscriptionScreen({
 
       if (result.success) {
         console.log('✅ IAP purchase successful:', result.purchase);
-        
+
         // Success is handled by the purchase listener in iapService
         // which will verify with backend and show success message
         onComplete();
       } else {
         console.error('❌ IAP purchase failed:', result.error);
-        Alert.alert('Purchase Failed', result.error || 'Failed to process purchase. Please try again.');
+        Alert.alert(
+          'Purchase Failed',
+          result.error || 'Failed to process purchase. Please try again.'
+        );
       }
     } catch (error) {
       console.error('Subscription error:', error);
@@ -96,7 +103,7 @@ export default function SubscriptionScreen({
       console.log('🔄 Restoring purchases...');
 
       const purchases = await iapService.restorePurchases();
-      
+
       if (purchases.length > 0) {
         Toast.show({
           type: 'success',
@@ -118,10 +125,12 @@ export default function SubscriptionScreen({
   const renderPlanCard = (plan: PricingPlan) => {
     const isSelected = selectedPlan === plan.id;
     const monthlyEquivalent = getMonthlyEquivalent(plan);
-    
+
     // Try to get IAP subscription for this plan
     const iapSubscription = iapService.getSubscriptionByPlan(plan.id);
-    const displayPrice = iapSubscription ? iapService.formatPrice(iapSubscription) : formatPrice(plan.price);
+    const displayPrice = iapSubscription
+      ? iapService.formatPrice(iapSubscription)
+      : formatPrice(plan.price);
 
     return (
       <TouchableOpacity
@@ -195,7 +204,19 @@ export default function SubscriptionScreen({
       {/* Header */}
       <View className="border-b border-border px-6 pb-4 pt-4">
         <View className="flex-row items-center justify-between">
-          <Text className="text-2xl font-bold text-foreground">Choose Your Plan</Text>
+          <View className="flex-row items-center">
+            {onBack && (
+              <TouchableOpacity onPress={onBack} className="mr-4">
+                <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            )}
+            <Text className="text-2xl font-bold text-foreground">Choose Your Plan</Text>
+          </View>
+          {showSkipOption && onSkip && (
+            <TouchableOpacity onPress={onSkip} className="px-3 py-1">
+              <Text className="font-medium text-primary">Skip</Text>
+            </TouchableOpacity>
+          )}
         </View>
         <Text className="mt-1 text-muted-foreground">
           Unlock premium features and get the most out of ExpenseAI
@@ -209,15 +230,15 @@ export default function SubscriptionScreen({
         {/* Payment Information */}
         <View className="mb-6">
           <Text className="mb-4 text-lg font-semibold text-foreground">Payment Method</Text>
-          
+
           <View className="rounded-lg border border-border bg-secondary p-4">
             <View className="flex-row items-center">
               <Ionicons name="phone-portrait-outline" size={20} color="#22c55e" />
               <Text className="ml-2 text-sm font-medium text-foreground">Mobile Payment</Text>
             </View>
             <Text className="mt-2 text-xs text-muted-foreground">
-              Payment will be processed through your device's app store. You can manage your subscription 
-              in your App Store or Google Play settings.
+              Payment will be processed through your device&apos;s app store. You can manage your
+              subscription in your App Store or Google Play settings.
             </Text>
           </View>
         </View>
@@ -238,7 +259,7 @@ export default function SubscriptionScreen({
           <TouchableOpacity
             onPress={handleSubscribe}
             disabled={processingPayment || !iapInitialized}
-            className={`rounded-lg p-4 mb-3 ${
+            className={`mb-3 rounded-lg p-4 ${
               !processingPayment && iapInitialized ? 'bg-primary' : 'bg-muted'
             }`}>
             {processingPayment ? (
@@ -246,11 +267,11 @@ export default function SubscriptionScreen({
             ) : (
               <Text
                 className={`text-center text-lg font-semibold ${
-                  !processingPayment && iapInitialized ? 'text-primary-foreground' : 'text-muted-foreground'
+                  !processingPayment && iapInitialized
+                    ? 'text-primary-foreground'
+                    : 'text-muted-foreground'
                 }`}>
-                {selectedPlanData
-                  ? `Subscribe - ${selectedPlanData.name}`
-                  : 'Subscribe Now'}
+                {selectedPlanData ? `Subscribe - ${selectedPlanData.name}` : 'Subscribe Now'}
               </Text>
             )}
           </TouchableOpacity>
@@ -259,12 +280,12 @@ export default function SubscriptionScreen({
           <TouchableOpacity
             onPress={handleRestorePurchases}
             disabled={processingPayment || !iapInitialized}
-            className="rounded-lg border border-border p-3 mb-3">
+            className="mb-3 rounded-lg border border-border p-3">
             <Text className="text-center font-medium text-foreground">Restore Purchases</Text>
           </TouchableOpacity>
 
           <Text className="mt-3 text-center text-xs text-muted-foreground">
-            By subscribing, you agree to our Terms of Service and Privacy Policy. Subscriptions 
+            By subscribing, you agree to our Terms of Service and Privacy Policy. Subscriptions
             auto-renew unless cancelled. Manage in your device settings.
           </Text>
         </View>

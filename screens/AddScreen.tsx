@@ -1,14 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View, Alert } from 'react-native';
 import AddExpenseScreen from './AddExpenseScreen';
 import CameraScreen from './CameraScreen';
 import VoiceScreen from './VoiceScreen';
+import { useSubscription } from '../contexts/SubscriptionContext';
+import SubscriptionScreen from './SubscriptionScreen';
 
 export default function AddScreen() {
-  const [currentView, setCurrentView] = useState<'options' | 'camera' | 'voice' | 'manual'>('options');
+  const [currentView, setCurrentView] = useState<'options' | 'camera' | 'voice' | 'manual' | 'subscription'>('options');
   const [processedData, setProcessedData] = useState<any>(null);
+  const { canAccessPremiumFeatures } = useSubscription();
 
   const handleCameraScanComplete = (data: any) => {
     setProcessedData(data);
@@ -27,6 +30,24 @@ export default function AddScreen() {
 
   const handleBackToOptions = () => {
     setProcessedData(null);
+    setCurrentView('options');
+  };
+
+  const handlePremiumFeatureClick = (feature: 'camera' | 'voice') => {
+    if (!canAccessPremiumFeatures()) {
+      // Directly show subscription screen for premium features
+      setCurrentView('subscription');
+      return;
+    }
+    
+    setCurrentView(feature);
+  };
+
+  const handleSubscriptionComplete = () => {
+    setCurrentView('options');
+  };
+
+  const handleSubscriptionSkip = () => {
     setCurrentView('options');
   };
 
@@ -62,6 +83,18 @@ export default function AddScreen() {
     );
   }
 
+  // Show subscription screen
+  if (currentView === 'subscription') {
+    return (
+      <SubscriptionScreen
+        onComplete={handleSubscriptionComplete}
+        onSkip={handleSubscriptionSkip}
+        onBack={handleBackToOptions}
+        showSkipOption={false}  // Don't show skip when accessing premium features
+      />
+    );
+  }
+
   // Main options screen
   return (
     <View className="flex-1 bg-background">
@@ -79,13 +112,20 @@ export default function AddScreen() {
       <View className="flex-1 px-6 pt-8">
         {/* Scan Receipt Option */}
         <TouchableOpacity
-          onPress={() => setCurrentView('camera')}
+          onPress={() => handlePremiumFeatureClick('camera')}
           className="mb-4 flex-row items-center rounded-xl border border-border bg-secondary p-6">
           <View className="mr-4 h-16 w-16 items-center justify-center rounded-full bg-primary">
             <Ionicons name="camera" size={32} color="#000000" />
           </View>
           <View className="flex-1">
-            <Text className="text-lg font-semibold text-foreground">Scan Receipt</Text>
+            <View className="flex-row items-center">
+              <Text className="text-lg font-semibold text-foreground">Scan Receipt</Text>
+              {!canAccessPremiumFeatures() && (
+                <View className="ml-2 rounded-md bg-amber-500 px-2 py-1">
+                  <Text className="text-xs font-bold text-black">PRO</Text>
+                </View>
+              )}
+            </View>
             <Text className="mt-1 text-sm text-muted-foreground">
               Take a photo of your receipt and let AI extract the details
             </Text>
@@ -95,13 +135,20 @@ export default function AddScreen() {
 
         {/* Voice Entry Option */}
         <TouchableOpacity
-          onPress={() => setCurrentView('voice')}
+          onPress={() => handlePremiumFeatureClick('voice')}
           className="mb-4 flex-row items-center rounded-xl border border-border bg-secondary p-6">
           <View className="mr-4 h-16 w-16 items-center justify-center rounded-full bg-accent">
             <Ionicons name="mic" size={32} color="#FFFFFF" />
           </View>
           <View className="flex-1">
-            <Text className="text-lg font-semibold text-foreground">Voice Entry</Text>
+            <View className="flex-row items-center">
+              <Text className="text-lg font-semibold text-foreground">Voice Entry</Text>
+              {!canAccessPremiumFeatures() && (
+                <View className="ml-2 rounded-md bg-amber-500 px-2 py-1">
+                  <Text className="text-xs font-bold text-black">PRO</Text>
+                </View>
+              )}
+            </View>
             <Text className="mt-1 text-sm text-muted-foreground">
               Tell us about your expense and we'll create it for you
             </Text>

@@ -301,6 +301,51 @@ export class IAPService {
       return false;
     }
   }
+
+  /**
+   * Get user's active subscription
+   */
+  async getActiveSubscription(userId: string): Promise<any | null> {
+    try {
+      const { data: subscription, error } = await supabaseAdmin
+        .from('user_subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+        .in('status', ['active', 'trialing'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Failed to get active subscription:', error);
+        return null;
+      }
+
+      if (!subscription) {
+        return null;
+      }
+
+      // Check if subscription has expired
+      const endDate = new Date(subscription.current_period_end);
+      if (endDate <= new Date()) {
+        // Update subscription status to expired
+        await supabaseAdmin
+          .from('user_subscriptions')
+          .update({ 
+            status: 'cancelled',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', subscription.id);
+        
+        return null;
+      }
+
+      return subscription;
+    } catch (error) {
+      console.error('Get active subscription error:', error);
+      return null;
+    }
+  }
 }
 
 export const iapService = new IAPService();

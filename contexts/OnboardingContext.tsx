@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { apiService } from '../services/api';
-import { UserPreferences } from '../types';
 import { useAuth } from './AuthContext';
 
 interface OnboardingContextType {
@@ -41,7 +40,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
   const checkOnboardingStatus = async () => {
     try {
       setIsCheckingOnboarding(true);
-      
+
       // First check local storage for quick access
       const localStatus = await AsyncStorage.getItem(ONBOARDING_STORAGE_KEY);
       if (localStatus === 'true') {
@@ -52,11 +51,11 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
 
       // Check from API if not found locally or if local is false
       const response = await apiService.getUserPreferences();
-      
+
       if (response.success && response.data) {
         const completed = response.data.onboarding_completed;
         setOnboardingCompleted(completed);
-        
+
         // Save to local storage for future quick access
         await AsyncStorage.setItem(ONBOARDING_STORAGE_KEY, completed.toString());
       } else {
@@ -100,8 +99,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
         markOnboardingCompleted,
         checkOnboardingStatus,
         resetOnboarding,
-      }}
-    >
+      }}>
       {children}
     </OnboardingContext.Provider>
   );

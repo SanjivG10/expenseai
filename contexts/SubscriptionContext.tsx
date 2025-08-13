@@ -1,9 +1,19 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  SetStateAction,
+  Dispatch,
+} from 'react';
 import { Platform } from 'react-native';
 import { apiService } from '../services/api';
 import { iapService } from '../services/iapService';
 import { stripeService } from '../services/stripeService';
 import { UserSubscription, isSubscriptionActive } from '../types/subscription';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ONBOARDING_STORAGE_KEY } from 'constants/storage';
 
 interface SubscriptionState {
   subscription: UserSubscription | null;
@@ -17,6 +27,8 @@ interface SubscriptionContextType extends SubscriptionState {
   cancelSubscription: (subscriptionId: string, cancelAtPeriodEnd?: boolean) => Promise<boolean>;
   isSubscribed: () => boolean;
   canAccessPremiumFeatures: () => boolean;
+  hasSkippedSubscription: boolean;
+  setHasSkippedSubscription: Dispatch<SetStateAction<boolean>>;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
@@ -33,6 +45,8 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     hasTrialExpired: false,
   });
 
+  const [hasSkippedSubscription, setHasSkippedSubscription] = useState(false);
+
   // Load subscription on mount
   useEffect(() => {
     loadSubscription();
@@ -41,6 +55,11 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
   const loadSubscription = async () => {
     try {
       setSubscriptionState((prev) => ({ ...prev, isLoading: true }));
+
+      const onboardingStatus = await AsyncStorage.getItem(ONBOARDING_STORAGE_KEY);
+      if (onboardingStatus?.toString() === 'true') {
+        setHasSkippedSubscription(true);
+      }
 
       let subscription: UserSubscription | null = null;
 
@@ -132,6 +151,8 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
     cancelSubscription,
     isSubscribed,
     canAccessPremiumFeatures,
+    hasSkippedSubscription,
+    setHasSkippedSubscription,
   };
 
   return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>;

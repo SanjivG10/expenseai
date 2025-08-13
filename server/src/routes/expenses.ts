@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { auth } from '../middleware/auth';
+import { requireActiveSubscription } from '../middleware/subscriptionAuth';
 import { validate } from '../middleware/validation';
 import {
   createExpense,
@@ -40,9 +41,9 @@ router.delete('/:id', deleteExpense);
 // Upload receipt image
 router.post('/upload-receipt', validate(uploadImageSchema, 'body'), uploadReceiptImage);
 
-// Process receipt with AI
-router.post('/process-receipt', processReceipt);
-router.post('/process-voice', upload.single('audio'), processVoice);
+// Process receipt with AI (Premium Feature)
+router.post('/process-receipt', requireActiveSubscription, processReceipt);
+router.post('/process-voice', requireActiveSubscription, upload.single('audio'), processVoice);
 router.post('/', validate(createExpenseSchema, 'body'), createExpense);
 
 export default router;

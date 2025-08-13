@@ -98,6 +98,13 @@ export const analyticsQuerySchema = z.object({
   period: z.enum(['week', 'month', 'year']).default('month'),
 });
 
+// Item breakdown schema
+export const expenseItemSchema = z.object({
+  name: z.string().min(1, 'Item name is required').max(100, 'Item name too long'),
+  quantity: z.number().min(0.01, 'Quantity must be greater than 0'),
+  price: z.number().min(0, 'Price must be greater than or equal to 0'),
+});
+
 // Expense CRUD schemas
 export const createExpenseSchema = z.object({
   amount: z.number().min(0.01, 'Amount must be greater than 0'),
@@ -106,6 +113,7 @@ export const createExpenseSchema = z.object({
   expense_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
   notes: z.string().max(1000, 'Notes too long').optional(),
   receipt_image: z.string().url('Invalid image URL').optional(), // URL string
+  item_breakdowns: z.array(expenseItemSchema).optional(),
 });
 
 export const updateExpenseSchema = z.object({
@@ -122,6 +130,7 @@ export const updateExpenseSchema = z.object({
     .optional(),
   notes: z.string().max(1000, 'Notes too long').optional(),
   receipt_image: z.string().url('Invalid image URL').optional(),
+  item_breakdowns: z.array(expenseItemSchema).optional(),
 });
 
 // Category CRUD schemas

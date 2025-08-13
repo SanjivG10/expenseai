@@ -1,22 +1,19 @@
-import { useState } from 'react';
 import LoadingScreen from '../components/LoadingScreen';
 import { useAuth } from '../contexts/AuthContext';
 import { useOnboarding } from '../contexts/OnboardingContext';
-import { useSubscription } from '../contexts/SubscriptionContext';
 import OnboardingScreen from '../screens/OnboardingScreen';
-import SubscriptionScreen from '../screens/SubscriptionScreen';
 import AuthNavigator from './AuthNavigator';
 import TabNavigator from './TabNavigator';
 
 export default function AppNavigator() {
   const { isAuthenticated, isLoading } = useAuth();
   const { onboardingCompleted, isCheckingOnboarding, markOnboardingCompleted } = useOnboarding();
-  const { canAccessPremiumFeatures, isLoading: subscriptionLoading } = useSubscription();
+  // const { canAccessPremiumFeatures, isLoading: subscriptionLoading } = useSubscription();
 
-  const [showSubscriptionScreen, setShowSubscriptionScreen] = useState(false);
+  // const [showSubscriptionScreen, setShowSubscriptionScreen] = useState(false);
 
   // Show loading screen while checking authentication, onboarding or subscription state
-  if (isLoading || (isAuthenticated && isCheckingOnboarding) || subscriptionLoading) {
+  if (isLoading || (isAuthenticated && isCheckingOnboarding)) {
     return <LoadingScreen message="Welcome to ExpenseAI" showLogo={true} />;
   }
 
@@ -30,23 +27,23 @@ export default function AppNavigator() {
       <OnboardingScreen
         onComplete={() => {
           markOnboardingCompleted();
-          setShowSubscriptionScreen(true);
+          // setShowSubscriptionScreen(true);
         }}
       />
     );
   }
 
-  if (
-    showSubscriptionScreen ||
-    (isAuthenticated && onboardingCompleted && !canAccessPremiumFeatures())
-  ) {
-    return (
-      <SubscriptionScreen
-        onComplete={() => setShowSubscriptionScreen(false)}
-        showSkipOption={true}
-      />
-    );
-  }
+  // if (
+  //   showSubscriptionScreen ||
+  //   (isAuthenticated && onboardingCompleted && !canAccessPremiumFeatures())
+  // ) {
+  //   return (
+  //     <SubscriptionScreen
+  //       onComplete={() => setShowSubscriptionScreen(false)}
+  //       showSkipOption={true}
+  //     />
+  //   );
+  // }
 
   return <TabNavigator />;
 }

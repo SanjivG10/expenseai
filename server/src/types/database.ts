@@ -14,6 +14,13 @@ export interface Category {
   updated_at: string;
 }
 
+// Item breakdown for expenses
+export interface ExpenseItem {
+  name: string;
+  quantity: number;
+  price: number;
+}
+
 export interface Expense {
   id: string;
   user_id: string;
@@ -23,6 +30,7 @@ export interface Expense {
   expense_date: string; // ISO date string
   notes?: string;
   receipt_image_url?: string;
+  item_breakdowns?: ExpenseItem[];
   created_at: string;
   updated_at: string;
 }

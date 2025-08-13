@@ -38,6 +38,8 @@ export default function ExpensesScreen() {
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [editingExpense, setEditingExpense] = useState<ExpenseWithCategory | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [expandedExpense, setExpandedExpense] = useState<string | null>(null);
+  const [editingItemBreakdown, setEditingItemBreakdown] = useState<string | null>(null);
 
   // Debounce the search query
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
@@ -148,6 +150,8 @@ export default function ExpensesScreen() {
     fetchExpensesData(true);
     setEditingExpense(null);
     setShowEditModal(false);
+    setEditingItemBreakdown(null);
+    setExpandedExpense(null);
     // The AddExpenseScreen already shows success toast
   };
 
@@ -159,6 +163,16 @@ export default function ExpensesScreen() {
 
   const handleRefresh = () => {
     fetchExpensesData(true);
+  };
+
+  const toggleExpenseExpansion = (expenseId: string) => {
+    setExpandedExpense(expandedExpense === expenseId ? null : expenseId);
+  };
+
+  const handleEditItemBreakdown = (expense: ExpenseWithCategory) => {
+    setEditingExpense(expense);
+    setEditingItemBreakdown(expense.id);
+    setShowEditModal(true);
   };
 
   // Loading state
@@ -296,6 +310,88 @@ export default function ExpensesScreen() {
                     {expense.notes}
                   </Text>
                 )}
+                {expense.item_breakdowns && expense.item_breakdowns.length > 0 && (
+                  <View className="mt-2">
+                    <TouchableOpacity
+                      onPress={() => toggleExpenseExpansion(expense.id)}
+                      className="flex-row items-center justify-between rounded-lg bg-muted p-2">
+                      <View className="flex-1">
+                        <Text className="text-xs font-medium text-muted-foreground">
+                          {expense.item_breakdowns.length} item{expense.item_breakdowns.length > 1 ? 's' : ''}
+                        </Text>
+                        <Text className="text-xs text-muted-foreground">
+                          {expandedExpense === expense.id ? 'Tap to collapse' : 'Tap to view breakdown'}
+                        </Text>
+                      </View>
+                      <View className="flex-row items-center">
+                        <TouchableOpacity
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            handleEditItemBreakdown(expense);
+                          }}
+                          className="mr-2 rounded-lg bg-secondary p-1">
+                          <Ionicons name="pencil" size={12} color="#FFFFFF" />
+                        </TouchableOpacity>
+                        <Ionicons
+                          name={expandedExpense === expense.id ? 'chevron-up' : 'chevron-down'}
+                          size={16}
+                          color="#a3a3a3"
+                        />
+                      </View>
+                    </TouchableOpacity>
+                    
+                    {expandedExpense === expense.id && (
+                      <View className="mt-2 rounded-lg border border-border bg-input p-3">
+                        <View className="mb-2 flex-row items-center justify-between">
+                          <Text className="text-sm font-medium text-foreground">Item Breakdown</Text>
+                          <TouchableOpacity
+                            onPress={() => handleEditItemBreakdown(expense)}
+                            className="flex-row items-center rounded-lg bg-accent px-2 py-1">
+                            <Ionicons name="pencil" size={12} color="#FFFFFF" />
+                            <Text className="ml-1 text-xs font-medium text-foreground">Edit</Text>
+                          </TouchableOpacity>
+                        </View>
+                        
+                        {expense.item_breakdowns.map((item, index) => (
+                          <View
+                            key={index}
+                            className={`flex-row items-center justify-between py-2 ${
+                              index < expense.item_breakdowns!.length - 1 ? 'border-b border-border' : ''
+                            }`}>
+                            <View className="flex-1">
+                              <Text className="font-medium text-foreground">{item.name}</Text>
+                              <Text className="text-xs text-muted-foreground">
+                                Qty: {item.quantity} × ${item.price.toFixed(2)}
+                              </Text>
+                            </View>
+                            <Text className="font-medium text-foreground">
+                              ${(item.quantity * item.price).toFixed(2)}
+                            </Text>
+                          </View>
+                        ))}
+                        
+                        <View className="mt-2 border-t border-border pt-2">
+                          <View className="flex-row justify-between">
+                            <Text className="font-medium text-foreground">Breakdown Total:</Text>
+                            <Text className="font-bold text-foreground">
+                              ${expense.item_breakdowns.reduce((total, item) => total + (item.quantity * item.price), 0).toFixed(2)}
+                            </Text>
+                          </View>
+                          {Math.abs(expense.amount - expense.item_breakdowns.reduce((total, item) => total + (item.quantity * item.price), 0)) > 0.01 && (
+                            <View className="mt-1 flex-row justify-between">
+                              <Text className="text-xs text-muted-foreground">
+                                {expense.amount > expense.item_breakdowns.reduce((total, item) => total + (item.quantity * item.price), 0) ? 'Additional charges:' : 'Discount applied:'}
+                              </Text>
+                              <Text className="text-xs text-muted-foreground">
+                                ${Math.abs(expense.amount - expense.item_breakdowns.reduce((total, item) => total + (item.quantity * item.price), 0)).toFixed(2)}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                )}
               </View>
               <View className="items-end">
                 <Text className="text-lg font-bold text-foreground">
@@ -348,6 +444,7 @@ export default function ExpensesScreen() {
           onClose={() => {
             setShowEditModal(false);
             setEditingExpense(null);
+            setEditingItemBreakdown(null);
           }}
           onSave={handleUpdateExpense}
           initialData={editingExpense}

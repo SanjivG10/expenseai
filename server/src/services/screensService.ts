@@ -85,6 +85,7 @@ export const getDashboardDataService = async (
       amount,
       description,
       expense_date,
+      item_breakdowns,
       category_id,
       categories!category_id (
         id,
@@ -225,6 +226,7 @@ export const getExpensesDataService = async (
       expense_date,
       notes,
       receipt_image_url,
+      item_breakdowns,
       category_id,
       categories!category_id (
         id,
@@ -283,6 +285,7 @@ export const getExpensesDataService = async (
     expense_date: expense.expense_date,
     notes: expense.notes,
     receipt_image_url: expense.receipt_image_url,
+    item_breakdowns: expense.item_breakdowns || [],
     created_at: '',
     updated_at: '',
     category_name: expense.categories?.name,

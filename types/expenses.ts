@@ -1,5 +1,12 @@
 // Expense-related types organized by endpoint
 
+// Item breakdown for expenses
+export interface ExpenseItem {
+  name: string;
+  quantity: number;
+  price: number;
+}
+
 // Base expense entity (matches database schema)
 export interface Expense {
   id: string;
@@ -10,6 +17,7 @@ export interface Expense {
   expense_date: string; // YYYY-MM-DD format
   notes?: string;
   receipt_image_url?: string;
+  item_breakdowns?: ExpenseItem[];
   created_at: string;
   updated_at: string;
 }
@@ -36,6 +44,7 @@ export interface CreateExpenseRequest {
   expense_date: string; // YYYY-MM-DD format
   notes?: string; // Max 1000 chars
   receipt_image?: string; // Base64 encoded image
+  item_breakdowns?: ExpenseItem[];
 }
 
 export interface CreateExpenseResponse {
@@ -53,6 +62,7 @@ export interface UpdateExpenseRequest {
   expense_date?: string; // YYYY-MM-DD format
   notes?: string; // Max 1000 chars
   receipt_image?: string; // Base64 encoded image
+  item_breakdowns?: ExpenseItem[];
 }
 
 export interface UpdateExpenseResponse {

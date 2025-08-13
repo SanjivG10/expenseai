@@ -13,7 +13,7 @@ import { unifiedNotificationService } from './services/unifiedNotificationServic
 import './global.css';
 
 // Stripe configuration
-const STRIPE_PUBLISHABLE_KEY = __DEV__ 
+const STRIPE_PUBLISHABLE_KEY = __DEV__
   ? 'pk_test_...' // Replace with your Stripe test publishable key
   : 'pk_live_...'; // Replace with your Stripe live publishable key
 
@@ -34,22 +34,22 @@ export default function App() {
   }, []);
 
   return (
-    <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
-      <AuthProvider>
-        <SubscriptionProvider>
-          <OnboardingProvider>
-            <SafeAreaProvider>
-              <SafeAreaView className="flex-1">
-                <NavigationContainer>
-                  <AppNavigator />
-                  <StatusBar style="light" backgroundColor="#000000" />
-                </NavigationContainer>
-                <Toast />
-              </SafeAreaView>
-            </SafeAreaProvider>
-          </OnboardingProvider>
-        </SubscriptionProvider>
-      </AuthProvider>
-    </StripeProvider>
+    // <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
+    <AuthProvider>
+      <SubscriptionProvider>
+        <OnboardingProvider>
+          <SafeAreaProvider>
+            <SafeAreaView className="flex-1">
+              <NavigationContainer>
+                <AppNavigator />
+                <StatusBar style="light" backgroundColor="#000000" />
+              </NavigationContainer>
+              <Toast />
+            </SafeAreaView>
+          </SafeAreaProvider>
+        </OnboardingProvider>
+      </SubscriptionProvider>
+    </AuthProvider>
+    // </StripeProvider>
   );
 }

@@ -1,5 +1,11 @@
 import { create } from 'zustand';
 
+export interface ExpenseItem {
+  name: string;
+  quantity: number;
+  price: number;
+}
+
 export interface Expense {
   id: string;
   amount: number;
@@ -8,6 +14,7 @@ export interface Expense {
   date: string;
   notes?: string;
   image?: string;
+  item_breakdowns?: ExpenseItem[];
   timestamp: string;
 }
 

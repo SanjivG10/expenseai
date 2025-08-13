@@ -94,6 +94,7 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
         expense_date: expenseData.expense_date,
         notes: expenseData.notes,
         receipt_image_url: expenseData.receipt_image, // In production, this would be a URL after file upload
+        item_breakdowns: expenseData.item_breakdowns || [],
       })
       .select(
         `
@@ -190,6 +191,9 @@ export const updateExpense = async (req: Request, res: Response): Promise<void> 
         ...(updateData.notes !== undefined && { notes: updateData.notes }),
         ...(updateData.receipt_image !== undefined && {
           receipt_image_url: updateData.receipt_image,
+        }),
+        ...(updateData.item_breakdowns !== undefined && {
+          item_breakdowns: updateData.item_breakdowns,
         }),
         updated_at: new Date().toISOString(),
       })

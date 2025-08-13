@@ -20,7 +20,7 @@ import Toast from 'react-native-toast-message';
 import { z } from 'zod';
 import { InlineLoader } from '../components/LoadingScreen';
 import { apiService } from '../services/api';
-import { Category, CategoryWithStats, CreateExpenseRequest } from '../types';
+import { Category, CategoryWithStats, CreateExpenseRequest, ExpenseItem } from '../types';
 
 const expenseSchema = z.object({
   amount: z.string().min(1, 'Amount is required'),
@@ -62,6 +62,9 @@ export default function AddExpenseScreen({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [categories, setCategories] = useState<(Category | CategoryWithStats)[]>([]);
+  const [itemBreakdowns, setItemBreakdowns] = useState<ExpenseItem[]>([]);
+  const [showItemModal, setShowItemModal] = useState(false);
+  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
 
   console.log({ categories });
 
@@ -122,6 +125,7 @@ export default function AddExpenseScreen({
           notes: initialData.notes || '',
         });
         setSelectedImage(initialData.receipt_image_url || initialData.image || null);
+        setItemBreakdowns(initialData.item_breakdowns || []);
       } else {
         // Reset form for new expense
         reset({
@@ -132,6 +136,7 @@ export default function AddExpenseScreen({
           notes: '',
         });
         setSelectedImage(null);
+        setItemBreakdowns([]);
       }
     }
   }, [visible, initialData, reset]);
@@ -202,6 +207,7 @@ export default function AddExpenseScreen({
         expense_date: data.expense_date,
         notes: data.notes || undefined,
         receipt_image: imageUrl || undefined,
+        item_breakdowns: itemBreakdowns.length > 0 ? itemBreakdowns : undefined,
       };
 
       let response;
@@ -248,8 +254,11 @@ export default function AddExpenseScreen({
     // Reset form state
     reset();
     setSelectedImage(null);
+    setItemBreakdowns([]);
     setShowDatePicker(false);
     setShowCategoryPicker(false);
+    setShowItemModal(false);
+    setEditingItemIndex(null);
     onClose();
   };
 
@@ -259,6 +268,32 @@ export default function AddExpenseScreen({
 
   const getCategoryName = (categoryId: string) => {
     return categories.find((cat) => cat.id === categoryId)?.name || 'Select Category';
+  };
+
+  const addItem = (item: ExpenseItem) => {
+    if (editingItemIndex !== null) {
+      const newItems = [...itemBreakdowns];
+      newItems[editingItemIndex] = item;
+      setItemBreakdowns(newItems);
+      setEditingItemIndex(null);
+    } else {
+      setItemBreakdowns([...itemBreakdowns, item]);
+    }
+    setShowItemModal(false);
+  };
+
+  const removeItem = (index: number) => {
+    const newItems = itemBreakdowns.filter((_, i) => i !== index);
+    setItemBreakdowns(newItems);
+  };
+
+  const editItem = (index: number) => {
+    setEditingItemIndex(index);
+    setShowItemModal(true);
+  };
+
+  const calculateTotalFromItems = () => {
+    return itemBreakdowns.reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
   return (
@@ -298,6 +333,73 @@ export default function AddExpenseScreen({
           showsVerticalScrollIndicator={false}
           scrollEnabled={!isLoading}>
           {/* Amount Input */}
+          {/* Item Breakdowns Section */}
+          <View className="mt-4">
+            <View className="mb-2 flex-row items-center justify-between">
+              <Text className="text-sm font-medium text-foreground">Item Breakdown (Optional)</Text>
+              <TouchableOpacity
+                onPress={() => !isLoading && setShowItemModal(true)}
+                disabled={isLoading}
+                className="flex-row items-center rounded-lg bg-accent px-3 py-1">
+                <Ionicons name="add" size={16} color="#FFFFFF" />
+                <Text className="ml-1 text-sm font-medium text-foreground">Add Item</Text>
+              </TouchableOpacity>
+            </View>
+
+            {itemBreakdowns.length > 0 && (
+              <View className="rounded-lg border border-border bg-input">
+                {itemBreakdowns.map((item, index) => (
+                  <View
+                    key={index}
+                    className={`flex-row items-center justify-between p-3 ${
+                      index < itemBreakdowns.length - 1 ? 'border-b border-border' : ''
+                    }`}>
+                    <View className="flex-1">
+                      <Text className="font-medium text-foreground">{item.name}</Text>
+                      <Text className="text-sm text-muted-foreground">
+                        {item.quantity} × ${item.price.toFixed(2)} = $
+                        {(item.quantity * item.price).toFixed(2)}
+                      </Text>
+                    </View>
+                    <View className="flex-row">
+                      <TouchableOpacity
+                        onPress={() => editItem(index)}
+                        disabled={isLoading}
+                        className="mr-2 rounded-lg bg-secondary p-2">
+                        <Ionicons name="pencil" size={16} color="#FFFFFF" />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => removeItem(index)}
+                        disabled={isLoading}
+                        className="rounded-lg bg-destructive p-2">
+                        <Ionicons name="trash" size={16} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+
+                {itemBreakdowns.length > 0 && (
+                  <View className="border-t border-border bg-accent p-3">
+                    <View className="flex-row justify-between">
+                      <Text className="font-medium text-foreground">Total from Items:</Text>
+                      <Text className="font-bold text-foreground">
+                        ${calculateTotalFromItems().toFixed(2)}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {itemBreakdowns.length === 0 && (
+              <View className="items-center rounded-lg border-2 border-dashed border-border bg-secondary p-6">
+                <Ionicons name="receipt-outline" size={24} color="#a3a3a3" />
+                <Text className="mt-2 text-center text-muted-foreground">
+                  Add individual items to track detailed expense breakdown
+                </Text>
+              </View>
+            )}
+          </View>
           <View className="mt-6">
             <Text className="mb-2 text-sm font-medium text-foreground">Amount *</Text>
             <Controller
@@ -513,6 +615,150 @@ export default function AddExpenseScreen({
             </View>
           </View>
         </Modal>
+
+        {/* Item Modal */}
+        <ItemModal
+          visible={showItemModal && !isLoading}
+          onClose={() => {
+            setShowItemModal(false);
+            setEditingItemIndex(null);
+          }}
+          onSave={addItem}
+          initialItem={editingItemIndex !== null ? itemBreakdowns[editingItemIndex] : undefined}
+          isEditing={editingItemIndex !== null}
+        />
+      </View>
+    </Modal>
+  );
+}
+
+// Item Modal Component
+interface ItemModalProps {
+  visible: boolean;
+  onClose: () => void;
+  onSave: (item: ExpenseItem) => void;
+  initialItem?: ExpenseItem;
+  isEditing?: boolean;
+}
+
+function ItemModal({ visible, onClose, onSave, initialItem, isEditing }: ItemModalProps) {
+  const [name, setName] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [price, setPrice] = useState('');
+
+  useEffect(() => {
+    if (visible) {
+      if (initialItem) {
+        setName(initialItem.name);
+        setQuantity(initialItem.quantity.toString());
+        setPrice(initialItem.price.toString());
+      } else {
+        setName('');
+        setQuantity('');
+        setPrice('');
+      }
+    }
+  }, [visible, initialItem]);
+
+  const handleSave = () => {
+    if (!name.trim() || !quantity || !price) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Please fill in all fields',
+      });
+      return;
+    }
+
+    const quantityNum = parseFloat(quantity);
+    const priceNum = parseFloat(price);
+
+    if (quantityNum <= 0 || priceNum < 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Please enter valid quantity and price',
+      });
+      return;
+    }
+
+    onSave({
+      name: name.trim(),
+      quantity: quantityNum,
+      price: priceNum,
+    });
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <View className="flex-1 justify-center bg-black/50 px-6">
+        <View className="rounded-xl border border-border bg-background p-6">
+          <Text className="mb-4 text-xl font-bold text-foreground">
+            {isEditing ? 'Edit Item' : 'Add Item'}
+          </Text>
+
+          <View className="mb-4">
+            <Text className="mb-2 text-sm font-medium text-foreground">Item Name *</Text>
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              placeholder="e.g. Coffee, Sandwich"
+              placeholderTextColor="#a3a3a3"
+              className="rounded-lg border border-border bg-input px-4 py-3 text-foreground"
+            />
+          </View>
+
+          <View className="mb-4 flex-row space-x-3">
+            <View className="flex-1">
+              <Text className="mb-2 text-sm font-medium text-foreground">Quantity *</Text>
+              <TextInput
+                value={quantity}
+                onChangeText={setQuantity}
+                placeholder="1"
+                placeholderTextColor="#a3a3a3"
+                keyboardType="numeric"
+                className="rounded-lg border border-border bg-input px-4 py-3 text-foreground"
+              />
+            </View>
+            <View className="flex-1">
+              <Text className="mb-2 text-sm font-medium text-foreground">Price *</Text>
+              <View className="flex-row items-center rounded-lg border border-border bg-input">
+                <Text className="px-3 text-foreground">$</Text>
+                <TextInput
+                  value={price}
+                  onChangeText={setPrice}
+                  placeholder="0.00"
+                  placeholderTextColor="#a3a3a3"
+                  keyboardType="numeric"
+                  className="flex-1 py-3 pr-4 text-foreground"
+                />
+              </View>
+            </View>
+          </View>
+
+          {quantity && price && (
+            <View className="mb-4 rounded-lg bg-accent p-3">
+              <Text className="text-center text-sm text-muted-foreground">
+                Subtotal: ${(parseFloat(quantity || '0') * parseFloat(price || '0')).toFixed(2)}
+              </Text>
+            </View>
+          )}
+
+          <View className="flex-row space-x-3">
+            <TouchableOpacity
+              onPress={onClose}
+              className="flex-1 rounded-lg border border-border bg-secondary px-4 py-3">
+              <Text className="text-center font-medium text-foreground">Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleSave}
+              className="flex-1 rounded-lg bg-primary px-4 py-3">
+              <Text className="text-center font-medium text-primary-foreground">
+                {isEditing ? 'Update' : 'Add'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
     </Modal>
   );

@@ -295,13 +295,6 @@ class UnifiedNotificationService {
     Notifications.addNotificationReceivedListener((notification) => {
       console.log('Notification received while app is running:', notification);
     });
-
-    // Handle user interaction with notifications
-    Notifications.addNotificationResponseReceivedListener((response) => {
-      Toast.show({
-        text1: 'Check your budget',
-      });
-    });
   }
 
   /**

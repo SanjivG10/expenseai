@@ -1,9 +1,8 @@
 import { Router } from 'express';
-import { subscriptionController } from '../controllers/subscriptionController';
 
 const router = Router();
 
-// Stripe webhook endpoint (no auth required)
-router.post('/stripe', subscriptionController.handleStripeWebhook);
+// Removed Stripe webhook - using IAP only
+// No webhooks needed for IAP as we verify purchases directly
 
 export default router;

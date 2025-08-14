@@ -11,7 +11,7 @@ import iapRoutes from './routes/iap';
 import notificationRoutes from './routes/notifications';
 import preferencesRoutes from './routes/preferences';
 import screenRoutes from './routes/screens';
-import subscriptionRoutes from './routes/subscriptions';
+// Removed subscriptionRoutes - using IAP only
 import webhookRoutes from './routes/webhooks';
 import { cronScheduler } from './services/cronScheduler';
 
@@ -100,7 +100,7 @@ app.use(`/api/${env.API_VERSION}/expenses`, expenseRoutes);
 app.use(`/api/${env.API_VERSION}/categories`, categoryRoutes);
 app.use(`/api/${env.API_VERSION}/preferences`, preferencesRoutes);
 app.use(`/api/${env.API_VERSION}/notifications`, notificationRoutes);
-app.use(`/api/${env.API_VERSION}/subscriptions`, subscriptionRoutes);
+// Removed subscription routes - using IAP only
 app.use(`/api/${env.API_VERSION}/iap`, iapRoutes);
 
 // Catch 404 and forward to error handler

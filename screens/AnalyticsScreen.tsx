@@ -151,21 +151,21 @@ export default function AnalyticsScreen() {
   const categoryBreakdown =
     analyticsData && analyticsData.category_breakdown
       ? analyticsData.category_breakdown.map((category, index) => {
-          const colors = [
-            '#FF6B6B',
-            '#4ECDC4',
-            '#45B7D1',
-            '#96CEB4',
-            '#FFEAA7',
-            '#DDA0DD',
-            '#98D8C8',
-            '#F7DC6F',
+          // Generate shades of white/gray for pure black and white theme
+          const grayShades = [
+            '#FFFFFF', // White
+            '#F5F5F5', // Very light gray
+            '#E5E5E5', // Light gray
+            '#D4D4D4', // Medium light gray
+            '#A3A3A3', // Medium gray
+            '#737373', // Medium dark gray
+            '#525252', // Dark gray
+            '#404040', // Very dark gray
           ];
           return {
             name: category.category_name,
             amount: category.amount,
-            color:
-              category.category_color !== '#FFFFFF' ? category.category_color : colors[index % 8],
+            color: grayShades[index % 8],
             legendFontColor: '#FFFFFF',
           };
         })

@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import { stripeService } from '../services/stripeService';
 import { iapService } from '../services/iapService';
 
 export interface SubscriptionRequest extends Request {
@@ -29,20 +28,11 @@ export const checkSubscription = async (
 
     let subscription = null;
 
-    // First try to get IAP subscription (mobile)
+    // Get IAP subscription (mobile only)
     try {
       subscription = await iapService.getActiveSubscription(userId);
     } catch (error) {
-      console.log('No IAP subscription found, checking Stripe...');
-    }
-
-    // Fallback to Stripe subscription (web/legacy)
-    if (!subscription) {
-      try {
-        subscription = await stripeService.syncSubscriptionStatus(userId);
-      } catch (error) {
-        console.log('No Stripe subscription found');
-      }
+      console.log('No IAP subscription found');
     }
 
     // Check if subscription is active

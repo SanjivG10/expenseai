@@ -16,9 +16,7 @@ export interface PricingPlan {
   description: string;
   features: string[];
   isPopular?: boolean;
-  // Stripe IDs (for web or legacy)
-  stripeProductId: string;
-  stripePriceId: string;
+  // Removed Stripe IDs - using IAP only
   // IAP product IDs
   iosProductId: string;
   androidProductId: string;
@@ -28,9 +26,7 @@ export interface PricingPlan {
 export interface UserSubscription {
   id: string;
   user_id: string;
-  // For backward compatibility with Stripe
-  stripe_customer_id?: string;
-  stripe_subscription_id?: string;
+  // Removed Stripe IDs - using IAP only
   // IAP specific fields
   platform?: 'ios' | 'android';
   product_id?: string;
@@ -145,8 +141,7 @@ export const PRICING_PLANS: PricingPlan[] = [
       'Voice expense entry',
       'Unlimited expense tracking',
     ],
-    stripeProductId: ENV.STRIPE_PRODUCT_ID,
-    stripePriceId: ENV.STRIPE_WEEKLY_PRICE_ID,
+    // Removed Stripe IDs - using IAP only
     iosProductId: 'com.expenseai.weekly',
     androidProductId: 'weekly_subscription',
   },
@@ -167,8 +162,7 @@ export const PRICING_PLANS: PricingPlan[] = [
     ],
     isPopular: true,
     savings: 'Save 38%',
-    stripeProductId: ENV.STRIPE_PRODUCT_ID,
-    stripePriceId: ENV.STRIPE_MONTHLY_PRICE_ID,
+    // Removed Stripe IDs - using IAP only
     iosProductId: 'com.expenseai.monthly',
     androidProductId: 'monthly_subscription',
   },
@@ -188,8 +182,7 @@ export const PRICING_PLANS: PricingPlan[] = [
       'Unlimited expense tracking',
     ],
     savings: 'Save 68%',
-    stripeProductId: ENV.STRIPE_PRODUCT_ID,
-    stripePriceId: ENV.STRIPE_YEARLY_PRICE_ID,
+    // Removed Stripe IDs - using IAP only
     iosProductId: 'com.expenseai.yearly',
     androidProductId: 'yearly_subscription',
   },

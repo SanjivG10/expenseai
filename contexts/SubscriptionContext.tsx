@@ -10,7 +10,7 @@ import {
 import { Platform } from 'react-native';
 import { apiService } from '../services/api';
 import { iapService } from '../services/iapService';
-import { stripeService } from '../services/stripeService';
+// Removed stripeService - using IAP only
 import { UserSubscription, isSubscriptionActive } from '../types/subscription';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ONBOARDING_STORAGE_KEY } from 'constants/storage';
@@ -63,22 +63,15 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
 
       let subscription: UserSubscription | null = null;
 
-      // Try to get subscription from IAP first on mobile
-      if (Platform.OS === 'ios' || Platform.OS === 'android') {
-        try {
-          // Check for IAP subscription
-          const response = await apiService.get('/iap/subscription-status', true);
-          if (response.success && response.data) {
-            subscription = response.data;
-          }
-        } catch (error) {
-          console.log('No IAP subscription found, checking Stripe...');
+      // Get subscription from IAP only
+      try {
+        // Check for IAP subscription
+        const response = await apiService.get('/iap/subscription-status', true);
+        if (response.success && response.data) {
+          subscription = response.data;
         }
-      }
-
-      // Fallback to Stripe if no IAP subscription found
-      if (!subscription) {
-        subscription = await stripeService.getUserSubscription();
+      } catch (error) {
+        console.log('No IAP subscription found');
       }
 
       if (subscription) {
@@ -119,9 +112,9 @@ export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
 
   const cancelSubscription = async (subscriptionId: string, cancelAtPeriodEnd: boolean = true) => {
     try {
-      const success = await stripeService.cancelSubscription(subscriptionId, cancelAtPeriodEnd);
+      const response = await apiService.post('/iap/cancel-subscription', {}, true);
 
-      if (success) {
+      if (response.success) {
         // Refresh subscription state
         await loadSubscription();
         return true;

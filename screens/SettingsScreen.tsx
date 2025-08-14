@@ -18,7 +18,7 @@ import LoadingScreen, { InlineLoader } from '../components/LoadingScreen';
 import { useAuth } from '../contexts/AuthContext';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import { apiService } from '../services/api';
-import { stripeService } from '../services/stripeService';
+// Removed stripeService - using IAP only
 import { unifiedNotificationService } from '../services/unifiedNotificationService';
 import { UserSubscription, formatPrice } from '../types/subscription';
 import CategoriesScreen from './CategoriesScreen';
@@ -89,16 +89,12 @@ export default function SettingsScreen() {
 
   const loadSubscriptionData = async () => {
     try {
-      const subscription = await stripeService.getUserSubscription();
+      const response = await apiService.get('/iap/subscription-status', true);
+      const subscription = response.success ? response.data : null;
       setUserSubscription(subscription);
 
-      // Load billing history if user has subscription
-      if (subscription) {
-        const billingResponse = await apiService.getBillingHistory();
-        if (billingResponse.success && billingResponse.data) {
-          setBillingHistory(billingResponse.data);
-        }
-      }
+      // IAP subscriptions don't need traditional billing history
+      // Billing is managed through App Store/Google Play
     } catch (error) {
       console.error('Failed to load subscription data:', error);
     }
@@ -198,12 +194,9 @@ export default function SettingsScreen() {
           onPress: async () => {
             try {
               setSubscriptionLoading(true);
-              const success = await stripeService.cancelSubscription(
-                userSubscription.stripe_subscription_id,
-                true // Cancel at period end
-              );
+              const response = await apiService.post('/iap/cancel-subscription', {}, true);
 
-              if (success) {
+              if (response.success) {
                 await loadSubscriptionData(); // Refresh subscription data
                 setShowSubscriptionModal(false);
                 Toast.show({

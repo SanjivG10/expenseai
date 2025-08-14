@@ -67,21 +67,35 @@ export class AuthService {
     };
   }
 
+  // Set RevenueCat user ID in user metadata
+  private async setRevenueCatUserId(userId: string): Promise<void> {
+    try {
+      // Check if RevenueCat user ID is already set
+      const { data: user } = await supabaseAdmin.auth.admin.getUserById(userId);
+      
+      if (!user.user?.user_metadata?.revenuecat_user_id) {
+        // Set the Supabase Auth user ID as the RevenueCat user ID
+        await supabaseAdmin.auth.admin.updateUserById(userId, {
+          user_metadata: {
+            ...user.user?.user_metadata,
+            revenuecat_user_id: userId,
+          },
+        });
+        console.log(`✅ Set RevenueCat user ID for user: ${userId}`);
+      }
+    } catch (error) {
+      console.error('Failed to set RevenueCat user ID:', error);
+      // Don't throw error as this is not critical for auth flow
+    }
+  }
+
   // User signup
   async signup(signupData: SignupData): Promise<AuthResult> {
     const { email, password, firstName, lastName } = signupData;
 
     try {
-      // Check if user already exists
-      const { data: existingUser } = await supabase
-        .from('auth.users')
-        .select('*')
-        .eq('email', email)
-        .single();
-
-      if (existingUser && existingUser.users.length > 0) {
-        throw new DuplicateError('User with this email already exists');
-      }
+      // Note: We'll let Supabase handle duplicate email checking during user creation
+      // as we can't directly query auth.users from client SDK
 
       // Create user with Supabase Auth
       const { data, error } = await supabaseAdmin.auth.admin.createUser({
@@ -105,6 +119,9 @@ export class AuthService {
       const user = this.mapSupabaseUser(data.user, { firstName, lastName });
       const tokens = this.generateTokens(user);
 
+      // Set RevenueCat user ID in metadata
+      await this.setRevenueCatUserId(user.id);
+      
       await createDefaultCategoriesForUser(user.id);
 
       return {
@@ -137,6 +154,9 @@ export class AuthService {
 
       const user = this.mapSupabaseUser(data.user);
       const tokens = this.generateTokens(user);
+
+      // Set RevenueCat user ID in metadata if not already set
+      await this.setRevenueCatUserId(user.id);
 
       return {
         user,

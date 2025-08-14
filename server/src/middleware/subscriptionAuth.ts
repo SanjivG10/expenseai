@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { iapService } from '../services/iapService';
+import { supabaseAdmin } from '../config/supabase';
 
 export interface SubscriptionRequest extends Request {
   user?: any;
@@ -28,11 +28,48 @@ export const checkSubscription = async (
 
     let subscription = null;
 
-    // Get IAP subscription (mobile only)
+    // Get RevenueCat subscription from database
     try {
-      subscription = await iapService.getActiveSubscription(userId);
+      // Get user's RevenueCat user ID from auth metadata
+      const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
+      
+      if (userError || !userData.user) {
+        console.log('User not found for subscription check:', userId);
+        req.hasActiveSubscription = false;
+        req.subscription = null;
+        next();
+        return;
+      }
+
+      const revenueCatUserId = userData.user.user_metadata?.revenuecat_user_id || userId;
+
+      const { data: revenueCatSubscription, error } = await supabaseAdmin
+        .from('revenuecat_subscriptions')
+        .select('*')
+        .eq('revenuecat_user_id', revenueCatUserId)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!error && revenueCatSubscription) {
+        // Check if subscription hasn't expired
+        const endDate = new Date(revenueCatSubscription.current_period_end);
+        if (endDate > new Date()) {
+          subscription = revenueCatSubscription;
+        } else {
+          // Mark expired subscription as cancelled
+          await supabaseAdmin
+            .from('revenuecat_subscriptions')
+            .update({ 
+              status: 'cancelled',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', revenueCatSubscription.id);
+        }
+      }
     } catch (error) {
-      console.log('No IAP subscription found');
+      console.log('No RevenueCat subscription found:', error);
     }
 
     // Check if subscription is active

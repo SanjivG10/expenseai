@@ -50,9 +50,10 @@ const envSchema = z.object({
   // Logging
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
 
-  STRIPE_SECRET_KEY: z.string().min(1, 'Stripe API key is required'),
-  APPLE_SHARED_SECRET: z.string().min(1, 'Apple shared secret is required'),
-  ANDROID_PACKAGE_NAME: z.string().min(1, 'Android package name is required'),
+  // RevenueCat
+  REVENUECAT_SHARED_SECRET: z.string().min(1, 'RevenueCat shared secret is required'),
+  REVENUECAT_ANDROID_PACKAGE_NAME: z.string().min(1, 'RevenueCat Android package name is required'),
+  REVENUECAT_WEBHOOK_SECRET: z.string().min(1, 'RevenueCat webhook secret is required'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

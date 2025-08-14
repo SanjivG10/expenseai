@@ -28,6 +28,10 @@
       "supportsTablet": true,
       "notification": {
         "icon": "./assets/icon.png"
+      },
+      "bundleIdentifier": "com.sanjivg.expenseai",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {

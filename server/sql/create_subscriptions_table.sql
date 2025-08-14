@@ -1,11 +1,12 @@
--- Create subscriptions table for managing user subscriptions
+-- DEPRECATED: Create subscriptions table for managing user subscriptions (Stripe)
+-- This table is deprecated in favor of revenuecat_subscriptions table
 
 CREATE TYPE subscription_plan AS ENUM ('weekly', 'monthly', 'yearly');
 CREATE TYPE subscription_status AS ENUM ('active', 'inactive', 'cancelled', 'past_due', 'trialing');
 
 CREATE TABLE user_subscriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     stripe_customer_id TEXT NOT NULL,
     stripe_subscription_id TEXT NOT NULL UNIQUE,
     plan subscription_plan NOT NULL,

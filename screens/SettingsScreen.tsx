@@ -89,7 +89,7 @@ export default function SettingsScreen() {
 
   const loadSubscriptionData = async () => {
     try {
-      const response = await apiService.get('/iap/subscription-status', true);
+      const response = await apiService.get('/revenuecat/subscription-status', true);
       const subscription = response.success ? response.data : null;
       setUserSubscription(subscription);
 
@@ -194,7 +194,7 @@ export default function SettingsScreen() {
           onPress: async () => {
             try {
               setSubscriptionLoading(true);
-              const response = await apiService.post('/iap/cancel-subscription', {}, true);
+              const response = await apiService.post('/revenuecat/cancel-subscription', {}, true);
 
               if (response.success) {
                 await loadSubscriptionData(); // Refresh subscription data

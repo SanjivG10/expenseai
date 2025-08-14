@@ -1,6 +1,5 @@
-// Subscription and payment types for ExpenseAI
-import { ENV } from '../constants/envs';
-import type { Purchase, SubscriptionPurchase } from 'react-native-iap';
+// Subscription and payment types for ExpenseAI with RevenueCat
+import type { CustomerInfo, PurchasesStoreProduct } from 'react-native-purchases';
 
 export type SubscriptionPlan = 'weekly' | 'monthly' | 'yearly';
 export type SubscriptionStatus = 'active' | 'inactive' | 'cancelled' | 'past_due' | 'trialing';
@@ -26,13 +25,11 @@ export interface PricingPlan {
 export interface UserSubscription {
   id: string;
   user_id: string;
-  // Removed Stripe IDs - using IAP only
-  // IAP specific fields
-  platform?: 'ios' | 'android';
-  product_id?: string;
-  transaction_id?: string;
-  original_transaction_id?: string;
-  receipt_data?: string;
+  // RevenueCat specific fields
+  revenuecat_user_id: string;
+  entitlement_id: string;
+  product_id: string;
+  store: 'app_store' | 'play_store';
   // Common fields
   plan: SubscriptionPlan;
   status: SubscriptionStatus;
@@ -44,10 +41,18 @@ export interface UserSubscription {
   updated_at: string;
 }
 
-// API Request/Response types
-export interface CreateSubscriptionRequest {
-  plan: SubscriptionPlan;
-  payment_method_id: string;
+// API Request/Response types for RevenueCat
+export interface RevenueCatWebhookRequest {
+  event: {
+    type: string;
+    app_user_id: string;
+    product_id: string;
+    period_type: string;
+    purchased_at_ms: number;
+    expiration_at_ms?: number;
+    store: string;
+    environment: 'SANDBOX' | 'PRODUCTION';
+  };
 }
 
 export interface CreateSubscriptionResponse {
@@ -55,7 +60,7 @@ export interface CreateSubscriptionResponse {
   message: string;
   data?: {
     subscription: UserSubscription;
-    client_secret?: string; // For additional authentication if needed
+    customer_info?: CustomerInfo;
   };
 }
 
@@ -85,27 +90,17 @@ export interface UpdatePaymentMethodResponse {
   message: string;
 }
 
-// IAP specific types
-export interface VerifyPurchaseRequest {
-  receipt: Purchase | SubscriptionPurchase;
-  platform: 'ios' | 'android';
-}
-
-export interface VerifyPurchaseResponse {
-  success: boolean;
-  message: string;
-  data?: {
-    subscription: UserSubscription;
-    verified: boolean;
-  };
+// RevenueCat specific types
+export interface RevenueCatSubscription extends PurchasesStoreProduct {
+  // Extended with any additional properties we need
 }
 
 export interface RestorePurchasesResponse {
   success: boolean;
   message: string;
   data?: {
-    subscriptions: UserSubscription[];
-    restored: boolean;
+    customer_info: CustomerInfo;
+    has_active_subscription: boolean;
   };
 }
 

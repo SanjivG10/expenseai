@@ -7,7 +7,7 @@ import { apiLimiter } from './middleware/rateLimiter';
 import authRoutes from './routes/auth';
 import categoryRoutes from './routes/categories';
 import expenseRoutes from './routes/expenses';
-import iapRoutes from './routes/iap';
+import revenueCatRoutes from './routes/revenuecat';
 import notificationRoutes from './routes/notifications';
 import preferencesRoutes from './routes/preferences';
 import screenRoutes from './routes/screens';
@@ -100,8 +100,8 @@ app.use(`/api/${env.API_VERSION}/expenses`, expenseRoutes);
 app.use(`/api/${env.API_VERSION}/categories`, categoryRoutes);
 app.use(`/api/${env.API_VERSION}/preferences`, preferencesRoutes);
 app.use(`/api/${env.API_VERSION}/notifications`, notificationRoutes);
-// Removed subscription routes - using IAP only
-app.use(`/api/${env.API_VERSION}/iap`, iapRoutes);
+// RevenueCat routes
+app.use(`/api/${env.API_VERSION}/revenuecat`, revenueCatRoutes);
 
 // Catch 404 and forward to error handler
 app.use(notFoundHandler);

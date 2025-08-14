@@ -5,7 +5,8 @@ import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { InlineLoader } from '../components/LoadingScreen';
-import { iapService, IAPSubscription } from '../services/iapService';
+import { revenueCatService } from '../services/revenueCatService';
+import type { PurchasesStoreProduct } from 'react-native-purchases';
 import {
   PRICING_PLANS,
   PricingPlan,
@@ -13,6 +14,7 @@ import {
   formatPrice,
   getMonthlyEquivalent,
 } from '../types/subscription';
+import { useAuth } from 'contexts/AuthContext';
 
 interface SubscriptionScreenProps {
   onComplete: () => void;
@@ -29,35 +31,37 @@ export default function SubscriptionScreen({
 }: SubscriptionScreenProps) {
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>('monthly');
   const [processingPayment, setProcessingPayment] = useState(false);
-  const [availableSubscriptions, setAvailableSubscriptions] = useState<IAPSubscription[]>([]);
-  const [iapInitialized, setIapInitialized] = useState(false);
+  const [availableSubscriptions, setAvailableSubscriptions] = useState<PurchasesStoreProduct[]>([]);
+  const [revenueCatInitialized, setRevenueCatInitialized] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
-    // Initialize IAP
-    const initializeIAP = async () => {
+    if (!user?.id) return;
+
+    const initializeRevenueCat = async () => {
       try {
-        const success = await iapService.initialize();
+        const success = await revenueCatService.initialize(user.id);
         if (success) {
-          const subscriptions = await iapService.loadSubscriptions();
+          const subscriptions = await revenueCatService.loadSubscriptions();
           setAvailableSubscriptions(subscriptions);
-          setIapInitialized(true);
-          console.log('✅ IAP initialized with subscriptions:', subscriptions);
+          setRevenueCatInitialized(true);
+          console.log('✅ RevenueCat initialized with subscriptions:', subscriptions);
         } else {
           Alert.alert('Error', 'Payment system initialization failed');
         }
       } catch (error) {
-        console.error('Failed to initialize IAP:', error);
+        console.error('Failed to initialize RevenueCat:', error);
         Alert.alert('Error', 'Payment system initialization failed');
       }
     };
 
-    initializeIAP();
+    initializeRevenueCat();
 
     // Cleanup on unmount
     return () => {
-      iapService.cleanup();
+      revenueCatService.cleanup();
     };
-  }, []);
+  }, [user?.id]);
 
   const handlePlanSelect = (planId: SubscriptionPlan) => {
     setSelectedPlan(planId);
@@ -65,25 +69,29 @@ export default function SubscriptionScreen({
 
   const handleSubscribe = async () => {
     try {
-      if (!iapInitialized) {
+      if (!revenueCatInitialized) {
         Alert.alert('Error', 'Payment system not ready. Please try again.');
         return;
       }
 
       setProcessingPayment(true);
-      console.log('🛒 Starting IAP purchase for plan:', selectedPlan);
+      console.log('🛒 Starting RevenueCat purchase for plan:', selectedPlan);
 
-      // Purchase subscription via IAP
-      const result = await iapService.purchaseSubscription(selectedPlan);
+      // Purchase subscription via RevenueCat
+      const result = await revenueCatService.purchaseSubscription(selectedPlan);
 
       if (result.success) {
-        console.log('✅ IAP purchase successful:', result.purchase);
+        console.log('✅ RevenueCat purchase successful');
 
-        // Success is handled by the purchase listener in iapService
-        // which will verify with backend and show success message
+        Toast.show({
+          type: 'success',
+          text1: 'Subscription Activated!',
+          text2: 'Welcome to ExpenseAI Premium',
+        });
+
         onComplete();
       } else {
-        console.error('❌ IAP purchase failed:', result.error);
+        console.error('❌ RevenueCat purchase failed:', result.error);
         Alert.alert(
           'Purchase Failed',
           result.error || 'Failed to process purchase. Please try again.'
@@ -102,9 +110,9 @@ export default function SubscriptionScreen({
       setProcessingPayment(true);
       console.log('🔄 Restoring purchases...');
 
-      const purchases = await iapService.restorePurchases();
+      const result = await revenueCatService.restorePurchases();
 
-      if (purchases.length > 0) {
+      if (result.success) {
         Toast.show({
           type: 'success',
           text1: 'Purchases Restored!',
@@ -126,10 +134,18 @@ export default function SubscriptionScreen({
     const isSelected = selectedPlan === plan.id;
     const monthlyEquivalent = getMonthlyEquivalent(plan);
 
-    // Try to get IAP subscription for this plan
-    const iapSubscription = iapService.getSubscriptionByPlan(plan.id);
-    const displayPrice = iapSubscription
-      ? iapService.formatPrice(iapSubscription)
+    // Try to get RevenueCat subscription for this plan
+    const revenueCatSubscription = availableSubscriptions.find(
+      (sub) =>
+        sub.identifier ===
+        (plan.id === 'weekly'
+          ? 'weekly_subscription'
+          : plan.id === 'monthly'
+            ? 'monthly_subscription'
+            : 'yearly_subscription')
+    );
+    const displayPrice = revenueCatSubscription
+      ? revenueCatSubscription.priceString
       : formatPrice(plan.price);
 
     return (
@@ -258,16 +274,16 @@ export default function SubscriptionScreen({
         <View className="pb-8">
           <TouchableOpacity
             onPress={handleSubscribe}
-            disabled={processingPayment || !iapInitialized}
+            disabled={processingPayment || !revenueCatInitialized}
             className={`mb-3 rounded-lg p-4 ${
-              !processingPayment && iapInitialized ? 'bg-primary' : 'bg-muted'
+              !processingPayment && revenueCatInitialized ? 'bg-primary' : 'bg-muted'
             }`}>
             {processingPayment ? (
               <InlineLoader message="Processing..." showDots={false} />
             ) : (
               <Text
                 className={`text-center text-lg font-semibold ${
-                  !processingPayment && iapInitialized
+                  !processingPayment && revenueCatInitialized
                     ? 'text-primary-foreground'
                     : 'text-muted-foreground'
                 }`}>
@@ -279,7 +295,7 @@ export default function SubscriptionScreen({
           {/* Restore Purchases Button */}
           <TouchableOpacity
             onPress={handleRestorePurchases}
-            disabled={processingPayment || !iapInitialized}
+            disabled={processingPayment || !revenueCatInitialized}
             className="mb-3 rounded-lg border border-border p-3">
             <Text className="text-center font-medium text-foreground">Restore Purchases</Text>
           </TouchableOpacity>

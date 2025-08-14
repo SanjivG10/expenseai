@@ -70,7 +70,7 @@ fi
 
 # Stop existing PM2 processes (ignore errors if not running)
 print_status "Stopping existing PM2 processes..."
-pm2 stop expenseai-server || true
+pm2 stop expenseai || true
 
 # Start the application with PM2
 print_status "Starting application with PM2..."

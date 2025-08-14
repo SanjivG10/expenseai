@@ -1,0 +1,77 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+          cache-dependency-path: server/yarn.lock
+
+      - name: Install dependencies
+        working-directory: ./server
+        run: yarn install --frozen-lockfile
+
+      - name: Build application
+        working-directory: ./server
+        run: yarn build
+
+      - name: Run tests
+        working-directory: ./server
+        run: yarn test
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
+          port: ${{ secrets.EC2_PORT || 22 }}
+          script: |
+            # Navigate to application directory
+            cd /home/${{ secrets.EC2_USERNAME }}/expenseai
+
+            # Pull latest changes
+            git pull origin main
+
+            # Navigate to server directory
+            cd server
+
+            # Install dependencies
+            yarn install --frozen-lockfile
+
+            # Build application
+            yarn build
+
+            # Copy environment file if it doesn't exist
+            if [ ! -f .env ]; then
+              echo "Warning: .env file not found. Please ensure environment variables are configured."
+            fi
+
+            # Restart application with PM2
+            pm2 restart expenseai || pm2 start dist/app.js --name expenseai
+
+            # Save PM2 configuration
+            pm2 save
+
+            # Show PM2 status
+            pm2 status
+
+      - name: Health Check
+        run: |
+          sleep 10
+          curl -f http://${{ secrets.EC2_HOST }}:${{ secrets.APP_PORT || 8000 }}/health || exit 1
